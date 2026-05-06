@@ -54,6 +54,7 @@
   const setupScreen = document.getElementById("setupScreen");
   const playersScreen = document.getElementById("playersScreen");
   const gameScreen = document.getElementById("gameScreen");
+  const app = document.querySelector(".app");
   const playerOptions = document.getElementById("playerOptions");
   const playerNameFields = document.getElementById("playerNameFields");
   const playersCountLabel = document.getElementById("playersCountLabel");
@@ -144,6 +145,7 @@
       setupScreen.classList.add("hidden");
       playersScreen.classList.add("hidden");
       gameScreen.classList.add("hidden");
+      app.classList.remove("is-game-active");
       return;
     }
 
@@ -152,6 +154,7 @@
       setupScreen.classList.remove("hidden");
       playersScreen.classList.add("hidden");
       gameScreen.classList.add("hidden");
+      app.classList.remove("is-game-active");
       return;
     }
 
@@ -160,6 +163,7 @@
       setupScreen.classList.add("hidden");
       playersScreen.classList.remove("hidden");
       gameScreen.classList.add("hidden");
+      app.classList.remove("is-game-active");
       renderPlayerNameFields();
       return;
     }
@@ -168,6 +172,7 @@
     setupScreen.classList.add("hidden");
     playersScreen.classList.add("hidden");
     gameScreen.classList.remove("hidden");
+    app.classList.add("is-game-active");
     renderTable();
   }
 
