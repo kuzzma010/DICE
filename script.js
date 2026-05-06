@@ -124,6 +124,7 @@
 
   function render() {
     playersCountLabel.textContent = String(state.playerCount);
+    document.documentElement.style.setProperty("--player-count", String(state.playerCount || 2));
 
     if (!introSeen && !state.playerCount) {
       introScreen.classList.remove("hidden");
@@ -146,8 +147,24 @@
   }
 
   function renderTable() {
+    const table = tableHead.parentElement;
+
     tableHead.innerHTML = "";
     tableBody.innerHTML = "";
+    table.querySelector("colgroup")?.remove();
+
+    const colGroup = document.createElement("colgroup");
+    const categoryCol = document.createElement("col");
+    categoryCol.className = "category-col";
+    colGroup.appendChild(categoryCol);
+
+    state.players.forEach(() => {
+      const playerCol = document.createElement("col");
+      playerCol.className = "player-col";
+      colGroup.appendChild(playerCol);
+    });
+
+    table.prepend(colGroup);
 
     const headRow = document.createElement("tr");
     headRow.appendChild(createHeaderCell("Категория"));

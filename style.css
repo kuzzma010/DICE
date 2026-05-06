@@ -16,6 +16,10 @@
   --summary: #1b2934;
   --total: #33264f;
   --shadow: rgba(0, 0, 0, 0.35);
+  --player-count: 2;
+  --app-side-padding: 10px;
+  --category-col: clamp(72px, 22vw, 108px);
+  --player-col: clamp(38px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 112px);
 }
 
 * {
@@ -66,7 +70,7 @@ button:active {
   width: min(100%, 980px);
   min-height: 100vh;
   margin: 0 auto;
-  padding: max(14px, env(safe-area-inset-top)) 10px max(16px, env(safe-area-inset-bottom));
+  padding: max(14px, env(safe-area-inset-top)) var(--app-side-padding) max(16px, env(safe-area-inset-bottom));
 }
 
 .app-header {
@@ -227,17 +231,25 @@ h2 {
 
 .score-table {
   width: 100%;
-  min-width: 560px;
+  min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
 }
 
+.score-table col.category-col {
+  width: var(--category-col);
+}
+
+.score-table col.player-col {
+  width: var(--player-col);
+}
+
 .score-table th,
 .score-table td {
-  width: 78px;
-  height: 54px;
-  padding: 6px;
+  width: var(--player-col);
+  height: 52px;
+  padding: 4px;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   text-align: center;
@@ -249,10 +261,10 @@ h2 {
   position: sticky;
   left: 0;
   z-index: 2;
-  width: 132px;
+  width: var(--category-col);
   background: var(--panel-strong);
   text-align: left;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 900;
   line-height: 1.18;
   box-shadow: 10px 0 18px rgba(0, 0, 0, 0.22);
@@ -275,14 +287,14 @@ h2 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 3px;
   width: 100%;
   min-height: 36px;
   padding: 4px;
   border: 0;
   background: transparent;
   color: var(--text);
-  font-size: 13px;
+  font-size: clamp(10px, 2.8vw, 13px);
   line-height: 1.1;
   word-break: break-word;
 }
@@ -290,7 +302,7 @@ h2 {
 .edit-icon {
   flex: 0 0 auto;
   color: var(--accent-strong);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .score-input {
@@ -301,7 +313,7 @@ h2 {
   background: var(--input);
   color: var(--text);
   text-align: center;
-  font-size: 18px;
+  font-size: clamp(15px, 4.2vw, 18px);
   font-weight: 900;
 }
 
@@ -333,12 +345,12 @@ h2 {
 .readonly-score {
   display: inline-grid;
   place-items: center;
-  min-width: 46px;
+  min-width: min(42px, 100%);
   min-height: 34px;
   padding: 0 6px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
-  font-size: 18px;
+  font-size: clamp(15px, 4.2vw, 18px);
   font-weight: 900;
 }
 
@@ -389,23 +401,22 @@ h2 {
 }
 
 @media (max-width: 390px) {
+  :root {
+    --category-col: clamp(68px, 21vw, 86px);
+    --player-col: clamp(34px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 84px);
+  }
+
   h1 {
     font-size: 21px;
   }
 
-  .score-table {
-    min-width: 520px;
-  }
-
   .score-table th,
   .score-table td {
-    width: 70px;
     padding: 5px;
   }
 
   .score-table th:first-child,
   .score-table td:first-child {
-    width: 120px;
     font-size: 12px;
   }
 
@@ -415,8 +426,10 @@ h2 {
 }
 
 @media (min-width: 680px) {
-  .app {
-    padding-inline: 18px;
+  :root {
+    --app-side-padding: 18px;
+    --category-col: clamp(130px, 22vw, 168px);
+    --player-col: clamp(78px, calc((min(100vw, 980px) - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 112px);
   }
 
   .toolbar {
@@ -427,25 +440,17 @@ h2 {
     grid-column: auto;
   }
 
-  .score-table {
-    min-width: 720px;
-  }
-
-  .score-table th,
-  .score-table td {
-    width: 96px;
-  }
-
   .score-table th:first-child,
   .score-table td:first-child {
-    width: 168px;
     font-size: 14px;
   }
 }
 
 @media (max-width: 360px) {
-  .app {
-    padding-inline: 8px;
+  :root {
+    --app-side-padding: 8px;
+    --category-col: clamp(64px, 21vw, 76px);
+    --player-col: clamp(32px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 76px);
   }
 
   .app-header {
@@ -499,20 +504,14 @@ h2 {
     max-height: calc(100vh - 148px);
   }
 
-  .score-table {
-    min-width: 500px;
-  }
-
   .score-table th,
   .score-table td {
-    width: 66px;
     height: 48px;
     padding: 4px;
   }
 
   .score-table th:first-child,
   .score-table td:first-child {
-    width: 116px;
     font-size: 11px;
   }
 
@@ -538,34 +537,31 @@ h2 {
 }
 
 @media (min-width: 480px) and (max-width: 679px) {
-  .app {
-    padding-inline: 14px;
+  :root {
+    --app-side-padding: 14px;
+    --category-col: clamp(100px, 21vw, 132px);
+    --player-col: clamp(58px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 96px);
   }
 
   .table-shell {
     max-height: calc(100vh - 158px);
   }
 
-  .score-table {
-    min-width: 640px;
-  }
-
   .score-table th,
   .score-table td {
-    width: 86px;
     height: 56px;
-  }
-
-  .score-table th:first-child,
-  .score-table td:first-child {
-    width: 150px;
   }
 }
 
 @media (min-width: 900px) {
+  :root {
+    --app-side-padding: 24px;
+    --category-col: clamp(150px, 17vw, 190px);
+    --player-col: clamp(92px, calc((min(100vw, 1120px) - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 128px);
+  }
+
   .app {
     max-width: 1120px;
-    padding-inline: 24px;
   }
 
   .app-header {
@@ -591,19 +587,9 @@ h2 {
     max-height: calc(100vh - 180px);
   }
 
-  .score-table {
-    min-width: 860px;
-  }
-
   .score-table th,
   .score-table td {
-    width: 112px;
     height: 60px;
-  }
-
-  .score-table th:first-child,
-  .score-table td:first-child {
-    width: 190px;
   }
 
   .score-input {
