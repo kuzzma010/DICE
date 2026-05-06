@@ -220,6 +220,7 @@
           input.dataset.playerIndex = String(playerIndex);
           input.dataset.categoryId = category.id;
           input.addEventListener("input", handleScoreInput);
+          input.addEventListener("keydown", handleScoreKeydown);
           cell.appendChild(input);
         } else {
           const value = category.type === "summary" ? getUpperSum(playerIndex) : getGrandTotal(playerIndex);
@@ -252,6 +253,13 @@
     state.scores[playerIndex][categoryId] = cleanValue;
     saveState();
     updateTotalsOnly();
+  }
+
+  function handleScoreKeydown(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.target.blur();
+    }
   }
 
   function updateTotalsOnly() {

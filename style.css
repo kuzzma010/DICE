@@ -18,8 +18,8 @@
   --shadow: rgba(0, 0, 0, 0.35);
   --player-count: 2;
   --app-side-padding: 10px;
-  --category-col: clamp(72px, 22vw, 108px);
-  --player-col: clamp(38px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 112px);
+  --category-col: clamp(104px, calc(42vw - (var(--player-count) * 5px)), 150px);
+  --player-col: clamp(36px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 112px);
 }
 
 * {
@@ -248,7 +248,7 @@ h2 {
 .score-table th,
 .score-table td {
   width: var(--player-col);
-  height: 52px;
+  height: 58px;
   padding: 4px;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
@@ -267,6 +267,9 @@ h2 {
   font-size: 11px;
   font-weight: 900;
   line-height: 1.18;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
   box-shadow: 10px 0 18px rgba(0, 0, 0, 0.22);
 }
 
@@ -402,7 +405,7 @@ h2 {
 
 @media (max-width: 390px) {
   :root {
-    --category-col: clamp(68px, 21vw, 86px);
+    --category-col: clamp(100px, calc(44vw - (var(--player-count) * 5px)), 142px);
     --player-col: clamp(34px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 84px);
   }
 
@@ -449,7 +452,7 @@ h2 {
 @media (max-width: 360px) {
   :root {
     --app-side-padding: 8px;
-    --category-col: clamp(64px, 21vw, 76px);
+    --category-col: clamp(92px, calc(45vw - (var(--player-count) * 5px)), 130px);
     --player-col: clamp(32px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 76px);
   }
 
@@ -506,7 +509,7 @@ h2 {
 
   .score-table th,
   .score-table td {
-    height: 48px;
+    height: 54px;
     padding: 4px;
   }
 
@@ -539,7 +542,7 @@ h2 {
 @media (min-width: 480px) and (max-width: 679px) {
   :root {
     --app-side-padding: 14px;
-    --category-col: clamp(100px, 21vw, 132px);
+    --category-col: clamp(130px, calc(38vw - (var(--player-count) * 4px)), 180px);
     --player-col: clamp(58px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 96px);
   }
 
@@ -621,7 +624,7 @@ h2 {
 
   .score-table th,
   .score-table td {
-    height: 46px;
+    height: 52px;
   }
 
   .score-input {
