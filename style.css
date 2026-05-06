@@ -18,7 +18,7 @@
   --shadow: rgba(0, 0, 0, 0.35);
   --player-count: 2;
   --app-side-padding: 10px;
-  --category-col: clamp(104px, calc(42vw - (var(--player-count) * 5px)), 150px);
+  --category-col: clamp(82px, calc(32vw - (var(--player-count) * 3px)), 118px);
   --player-col: clamp(36px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 112px);
 }
 
@@ -405,7 +405,7 @@ h2 {
 
 @media (max-width: 390px) {
   :root {
-    --category-col: clamp(100px, calc(44vw - (var(--player-count) * 5px)), 142px);
+    --category-col: clamp(78px, calc(32vw - (var(--player-count) * 3px)), 112px);
     --player-col: clamp(34px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 84px);
   }
 
@@ -431,7 +431,7 @@ h2 {
 @media (min-width: 680px) {
   :root {
     --app-side-padding: 18px;
-    --category-col: clamp(130px, 22vw, 168px);
+    --category-col: clamp(112px, calc(24vw - (var(--player-count) * 3px)), 156px);
     --player-col: clamp(78px, calc((min(100vw, 980px) - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 112px);
   }
 
@@ -452,7 +452,7 @@ h2 {
 @media (max-width: 360px) {
   :root {
     --app-side-padding: 8px;
-    --category-col: clamp(92px, calc(45vw - (var(--player-count) * 5px)), 130px);
+    --category-col: clamp(74px, calc(33vw - (var(--player-count) * 3px)), 104px);
     --player-col: clamp(32px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 76px);
   }
 
@@ -542,7 +542,7 @@ h2 {
 @media (min-width: 480px) and (max-width: 679px) {
   :root {
     --app-side-padding: 14px;
-    --category-col: clamp(130px, calc(38vw - (var(--player-count) * 4px)), 180px);
+    --category-col: clamp(96px, calc(27vw - (var(--player-count) * 3px)), 144px);
     --player-col: clamp(58px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 96px);
   }
 
@@ -559,7 +559,7 @@ h2 {
 @media (min-width: 900px) {
   :root {
     --app-side-padding: 24px;
-    --category-col: clamp(150px, 17vw, 190px);
+    --category-col: clamp(130px, calc(16vw - (var(--player-count) * 2px)), 176px);
     --player-col: clamp(92px, calc((min(100vw, 1120px) - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 128px);
   }
 
