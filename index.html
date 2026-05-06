@@ -55,7 +55,6 @@
         <section id="gameScreen" class="game-screen hidden" aria-label="Таблица очков">
           <div class="toolbar">
             <button type="button" id="newGameBtn">Новая игра</button>
-            <button type="button" id="saveBtn" class="accent">Сохранить</button>
             <button type="button" id="resetBtn" class="danger">Сбросить игру</button>
           </div>
 
@@ -77,6 +76,17 @@
         <div class="modal-actions">
           <button type="button" id="cancelNameBtn">Отмена</button>
           <button type="button" id="saveNameBtn" class="accent">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resetModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+      <div class="modal-card">
+        <h2 id="resetModalTitle">Сбросить игру?</h2>
+        <p class="modal-text">Вы уверены, что хотите сбросить все очки?</p>
+        <div class="modal-actions">
+          <button type="button" id="cancelResetBtn">Отмена</button>
+          <button type="button" id="confirmResetBtn" class="danger">Сбросить</button>
         </div>
       </div>
     </div>

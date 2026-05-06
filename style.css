@@ -246,7 +246,7 @@ h2 {
 }
 
 .toolbar .danger {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 
 .accent {
@@ -426,6 +426,13 @@ h2 {
   font-weight: 800;
 }
 
+.modal-text {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
 #playerNameInput {
   width: 100%;
   min-height: 48px;
@@ -475,14 +482,6 @@ h2 {
     --app-side-padding: 18px;
     --category-col: clamp(76px, calc(16vw - (var(--player-count) * 2px)), 118px);
     --player-col: clamp(78px, calc((min(100vw, 980px) - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 112px);
-  }
-
-  .toolbar {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .toolbar .danger {
-    grid-column: auto;
   }
 
   .score-table th:first-child,

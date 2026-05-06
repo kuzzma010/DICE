@@ -63,12 +63,14 @@
   const backToCountBtn = document.getElementById("backToCountBtn");
   const continueToGameBtn = document.getElementById("continueToGameBtn");
   const newGameBtn = document.getElementById("newGameBtn");
-  const saveBtn = document.getElementById("saveBtn");
   const resetBtn = document.getElementById("resetBtn");
   const nameModal = document.getElementById("nameModal");
+  const resetModal = document.getElementById("resetModal");
   const playerNameInput = document.getElementById("playerNameInput");
   const saveNameBtn = document.getElementById("saveNameBtn");
   const cancelNameBtn = document.getElementById("cancelNameBtn");
+  const confirmResetBtn = document.getElementById("confirmResetBtn");
+  const cancelResetBtn = document.getElementById("cancelResetBtn");
 
   let editingPlayerIndex = null;
   let introSeen = false;
@@ -498,6 +500,19 @@
     renderTable();
   }
 
+  function openResetModal() {
+    resetModal.classList.remove("hidden");
+  }
+
+  function closeResetModal() {
+    resetModal.classList.add("hidden");
+  }
+
+  function confirmResetGame() {
+    closeResetModal();
+    resetGame();
+  }
+
   function newGame() {
     localStorage.removeItem(STORAGE_KEY);
     state.playerCount = 0;
@@ -516,14 +531,21 @@
   backToCountBtn.addEventListener("click", backToPlayerCount);
   continueToGameBtn.addEventListener("click", continueToGame);
   newGameBtn.addEventListener("click", newGame);
-  saveBtn.addEventListener("click", saveState);
-  resetBtn.addEventListener("click", resetGame);
+  resetBtn.addEventListener("click", openResetModal);
   saveNameBtn.addEventListener("click", savePlayerName);
   cancelNameBtn.addEventListener("click", closeNameModal);
+  confirmResetBtn.addEventListener("click", confirmResetGame);
+  cancelResetBtn.addEventListener("click", closeResetModal);
 
   nameModal.addEventListener("click", (event) => {
     if (event.target === nameModal) {
       closeNameModal();
+    }
+  });
+
+  resetModal.addEventListener("click", (event) => {
+    if (event.target === resetModal) {
+      closeResetModal();
     }
   });
 
