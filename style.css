@@ -18,7 +18,7 @@
   --shadow: rgba(0, 0, 0, 0.35);
   --player-count: 2;
   --app-side-padding: 10px;
-  --category-col: clamp(82px, calc(32vw - (var(--player-count) * 3px)), 118px);
+  --category-col: clamp(58px, calc(24vw - (var(--player-count) * 2px)), 84px);
   --player-col: clamp(36px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 112px);
 }
 
@@ -88,7 +88,7 @@ button:active {
 .eyebrow {
   margin: 0 0 3px;
   color: var(--accent-strong);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -405,7 +405,7 @@ h2 {
 
 @media (max-width: 390px) {
   :root {
-    --category-col: clamp(78px, calc(32vw - (var(--player-count) * 3px)), 112px);
+    --category-col: clamp(54px, calc(24vw - (var(--player-count) * 2px)), 78px);
     --player-col: clamp(34px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 84px);
   }
 
@@ -431,7 +431,7 @@ h2 {
 @media (min-width: 680px) {
   :root {
     --app-side-padding: 18px;
-    --category-col: clamp(112px, calc(24vw - (var(--player-count) * 3px)), 156px);
+    --category-col: clamp(76px, calc(16vw - (var(--player-count) * 2px)), 118px);
     --player-col: clamp(78px, calc((min(100vw, 980px) - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 112px);
   }
 
@@ -452,7 +452,7 @@ h2 {
 @media (max-width: 360px) {
   :root {
     --app-side-padding: 8px;
-    --category-col: clamp(74px, calc(33vw - (var(--player-count) * 3px)), 104px);
+    --category-col: clamp(50px, calc(23vw - (var(--player-count) * 2px)), 70px);
     --player-col: clamp(32px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 76px);
   }
 
@@ -542,7 +542,7 @@ h2 {
 @media (min-width: 480px) and (max-width: 679px) {
   :root {
     --app-side-padding: 14px;
-    --category-col: clamp(96px, calc(27vw - (var(--player-count) * 3px)), 144px);
+    --category-col: clamp(68px, calc(18vw - (var(--player-count) * 2px)), 104px);
     --player-col: clamp(58px, calc((100vw - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 96px);
   }
 
@@ -559,7 +559,7 @@ h2 {
 @media (min-width: 900px) {
   :root {
     --app-side-padding: 24px;
-    --category-col: clamp(130px, calc(16vw - (var(--player-count) * 2px)), 176px);
+    --category-col: clamp(88px, calc(10vw - (var(--player-count) * 1px)), 128px);
     --player-col: clamp(92px, calc((min(100vw, 1120px) - var(--category-col) - (var(--app-side-padding) * 2) - 8px) / var(--player-count)), 128px);
   }
 
