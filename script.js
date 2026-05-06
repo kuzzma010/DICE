@@ -215,12 +215,15 @@
           input.className = "score-input";
           input.type = "text";
           input.inputMode = "text";
+          input.enterKeyHint = "done";
           input.pattern = "-?[0-9]*";
           input.value = getScoreValue(playerIndex, category.id);
           input.dataset.playerIndex = String(playerIndex);
           input.dataset.categoryId = category.id;
           input.addEventListener("input", handleScoreInput);
+          input.addEventListener("beforeinput", handleScoreBeforeInput);
           input.addEventListener("keydown", handleScoreKeydown);
+          input.addEventListener("keyup", handleScoreKeydown);
           cell.appendChild(input);
         } else {
           const value = category.type === "summary" ? getUpperSum(playerIndex) : getGrandTotal(playerIndex);
@@ -253,6 +256,13 @@
     state.scores[playerIndex][categoryId] = cleanValue;
     saveState();
     updateTotalsOnly();
+  }
+
+  function handleScoreBeforeInput(event) {
+    if (event.inputType === "insertLineBreak") {
+      event.preventDefault();
+      event.target.blur();
+    }
   }
 
   function handleScoreKeydown(event) {
