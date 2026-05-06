@@ -137,6 +137,7 @@ h2 {
   line-height: 1;
 }
 
+.version-screen,
 .intro-screen,
 .players-screen,
 .setup-screen {
@@ -145,6 +146,7 @@ h2 {
   padding: 16px 0;
 }
 
+.version-panel,
 .intro-panel,
 .players-panel {
   display: grid;
@@ -173,6 +175,20 @@ h2 {
 .intro-start {
   width: 100%;
   margin-top: 2px;
+}
+
+.version-options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.version-btn {
+  min-height: 68px;
+  border-color: rgba(139, 92, 246, 0.45);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.2), rgba(28, 34, 48, 0.96));
+  font-size: 22px;
+  text-transform: uppercase;
 }
 
 .player-name-fields {
@@ -528,6 +544,7 @@ h2 {
     padding: 7px 8px;
   }
 
+  .version-panel,
   .intro-panel,
   .players-panel {
     gap: 12px;
@@ -634,6 +651,7 @@ h2 {
     font-size: 28px;
   }
 
+  .version-panel,
   .intro-panel,
   .players-panel {
     width: min(100%, 620px);

@@ -20,14 +20,25 @@
       </header>
 
       <main>
-        <section id="introScreen" class="intro-screen" aria-labelledby="introTitle">
+        <section id="versionScreen" class="version-screen" aria-labelledby="versionTitle">
+          <div class="version-panel">
+            <h2 id="versionTitle">Выбор версии</h2>
+            <div class="version-options" role="group" aria-label="Выбор версии игры">
+              <button type="button" class="version-btn" data-version="kuzma">kuzma</button>
+              <button type="button" class="version-btn" data-version="koro">koro</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="introScreen" class="intro-screen hidden" aria-labelledby="introTitle">
           <div class="intro-panel">
             <h2 id="introTitle">Как играть</h2>
             <ul class="rules-list">
               <li>Выберите от 2 до 6 игроков.</li>
               <li>Введите имена игроков перед началом таблицы.</li>
               <li>Заполняйте очки в строках категорий для каждого игрока.</li>
-              <li>Строки 1-6 суммируются и умножаются на 10.</li>
+              <li>В kuzma строки 1-6 суммируются и умножаются на 10, в koro считаются без умножения.</li>
+              <li>В koro, если сумма строк 1-6 меньше 0, к ней добавляется штраф -50.</li>
               <li>МС, БС, Ф, К и Покер получают бонус, если введено не 0.</li>
               <li>П - пара/покер, ПП - две пары, С - сет, МС - малый стрит, БС - большой стрит, Ф - фулл-хаус, К - каре, М - мусор.</li>
               <li>Имена игроков можно менять нажатием на заголовок колонки.</li>
@@ -36,7 +47,7 @@
           </div>
         </section>
 
-        <section id="setupScreen" class="setup-screen" aria-labelledby="setupTitle">
+        <section id="setupScreen" class="setup-screen hidden" aria-labelledby="setupTitle">
           <h2 id="setupTitle">Количество игроков</h2>
           <div class="player-options" id="playerOptions" role="group" aria-label="Выбор количества игроков"></div>
         </section>

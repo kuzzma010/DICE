@@ -44,12 +44,14 @@
   const scoringIds = categories.filter((category) => category.type === "input").map((category) => category.id);
 
   const state = {
+    version: "",
     playerCount: 0,
     players: [],
     scores: {},
     gameStarted: false,
   };
 
+  const versionScreen = document.getElementById("versionScreen");
   const introScreen = document.getElementById("introScreen");
   const setupScreen = document.getElementById("setupScreen");
   const playersScreen = document.getElementById("playersScreen");
@@ -72,6 +74,7 @@
   const cancelNameBtn = document.getElementById("cancelNameBtn");
   const confirmResetBtn = document.getElementById("confirmResetBtn");
   const cancelResetBtn = document.getElementById("cancelResetBtn");
+  const versionButtons = document.querySelectorAll(".version-btn");
 
   let editingPlayerIndex = null;
   let introSeen = false;
@@ -140,7 +143,18 @@
     playersCountLabel.textContent = String(state.playerCount);
     document.documentElement.style.setProperty("--player-count", String(state.playerCount || 2));
 
+    if (!state.version) {
+      versionScreen.classList.remove("hidden");
+      introScreen.classList.add("hidden");
+      setupScreen.classList.add("hidden");
+      playersScreen.classList.add("hidden");
+      gameScreen.classList.add("hidden");
+      app.classList.remove("is-game-active");
+      return;
+    }
+
     if (!introSeen && !state.playerCount) {
+      versionScreen.classList.add("hidden");
       introScreen.classList.remove("hidden");
       setupScreen.classList.add("hidden");
       playersScreen.classList.add("hidden");
@@ -150,6 +164,7 @@
     }
 
     if (!state.playerCount) {
+      versionScreen.classList.add("hidden");
       introScreen.classList.add("hidden");
       setupScreen.classList.remove("hidden");
       playersScreen.classList.add("hidden");
@@ -159,6 +174,7 @@
     }
 
     if (namesSetupActive || !state.gameStarted) {
+      versionScreen.classList.add("hidden");
       introScreen.classList.add("hidden");
       setupScreen.classList.add("hidden");
       playersScreen.classList.remove("hidden");
@@ -168,12 +184,19 @@
       return;
     }
 
+    versionScreen.classList.add("hidden");
     introScreen.classList.add("hidden");
     setupScreen.classList.add("hidden");
     playersScreen.classList.add("hidden");
     gameScreen.classList.remove("hidden");
     app.classList.add("is-game-active");
     renderTable();
+  }
+
+  function chooseVersion(version) {
+    state.version = version;
+    saveState();
+    render();
   }
 
   function renderPlayerNameFields() {
@@ -237,7 +260,7 @@
     state.scores = {};
     state.gameStarted = false;
     namesSetupActive = false;
-    localStorage.removeItem(STORAGE_KEY);
+    saveState();
     render();
   }
 
@@ -385,6 +408,11 @@
 
   function getUpperSum(playerIndex) {
     const sum = upperSectionIds.reduce((total, categoryId) => total + toScore(getScoreValue(playerIndex, categoryId)), 0);
+
+    if (state.version === "koro") {
+      return sum < 0 ? sum - 50 : sum;
+    }
+
     return sum * 10;
   }
 
@@ -462,15 +490,19 @@
     try {
       const parsed = JSON.parse(saved);
 
-      if (!parsed || !parsed.playerCount || !Array.isArray(parsed.players)) {
+      if (!parsed) {
         return;
       }
 
-      state.playerCount = parsed.playerCount;
-      state.players = parsed.players;
+      state.version = typeof parsed.version === "string" ? parsed.version : "";
+      state.playerCount = Number(parsed.playerCount) || 0;
+      state.players = Array.isArray(parsed.players) ? parsed.players : [];
       state.scores = parsed.scores || {};
       state.gameStarted = typeof parsed.gameStarted === "boolean" ? parsed.gameStarted : true;
-      normalizeScores();
+
+      if (state.playerCount) {
+        normalizeScores();
+      }
     } catch (error) {
       localStorage.removeItem(STORAGE_KEY);
     }
@@ -520,6 +552,7 @@
 
   function newGame() {
     localStorage.removeItem(STORAGE_KEY);
+    state.version = "";
     state.playerCount = 0;
     state.players = [];
     state.scores = {};
@@ -532,6 +565,9 @@
   startBtn.addEventListener("click", () => {
     introSeen = true;
     render();
+  });
+  versionButtons.forEach((button) => {
+    button.addEventListener("click", () => chooseVersion(button.dataset.version));
   });
   backToCountBtn.addEventListener("click", backToPlayerCount);
   continueToGameBtn.addEventListener("click", continueToGame);
