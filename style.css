@@ -245,8 +245,8 @@ h2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  padding: 3px 0 8px;
-  background: linear-gradient(180deg, var(--bg) 74%, rgba(13, 16, 23, 0));
+  padding: 3px 0 10px;
+  background: var(--bg);
 }
 
 .toolbar .danger {
@@ -261,7 +261,7 @@ h2 {
 
 .danger {
   border-color: rgba(251, 93, 122, 0.5);
-  background: var(--danger-bg);
+  background: rgba(251, 93, 122, 0.1);
   color: #ffd9e1;
 }
 
