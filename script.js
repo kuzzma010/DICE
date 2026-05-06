@@ -47,16 +47,21 @@
     playerCount: 0,
     players: [],
     scores: {},
+    gameStarted: false,
   };
 
   const introScreen = document.getElementById("introScreen");
   const setupScreen = document.getElementById("setupScreen");
+  const playersScreen = document.getElementById("playersScreen");
   const gameScreen = document.getElementById("gameScreen");
   const playerOptions = document.getElementById("playerOptions");
+  const playerNameFields = document.getElementById("playerNameFields");
   const playersCountLabel = document.getElementById("playersCountLabel");
   const tableHead = document.getElementById("tableHead");
   const tableBody = document.getElementById("tableBody");
   const startBtn = document.getElementById("startBtn");
+  const backToCountBtn = document.getElementById("backToCountBtn");
+  const continueToGameBtn = document.getElementById("continueToGameBtn");
   const newGameBtn = document.getElementById("newGameBtn");
   const saveBtn = document.getElementById("saveBtn");
   const resetBtn = document.getElementById("resetBtn");
@@ -67,6 +72,7 @@
 
   let editingPlayerIndex = null;
   let introSeen = false;
+  let namesSetupActive = false;
 
   initTelegram();
   createPlayerButtons();
@@ -110,6 +116,8 @@
     state.playerCount = playerCount;
     state.players = Array.from({ length: playerCount }, (_, index) => `Игрок ${index + 1}`);
     state.scores = {};
+    state.gameStarted = false;
+    namesSetupActive = true;
 
     for (let playerIndex = 0; playerIndex < playerCount; playerIndex += 1) {
       state.scores[playerIndex] = {};
@@ -120,6 +128,9 @@
 
     saveState();
     render();
+    window.setTimeout(() => {
+      playerNameFields.querySelector("input")?.focus();
+    }, 0);
   }
 
   function render() {
@@ -129,6 +140,7 @@
     if (!introSeen && !state.playerCount) {
       introScreen.classList.remove("hidden");
       setupScreen.classList.add("hidden");
+      playersScreen.classList.add("hidden");
       gameScreen.classList.add("hidden");
       return;
     }
@@ -136,14 +148,90 @@
     if (!state.playerCount) {
       introScreen.classList.add("hidden");
       setupScreen.classList.remove("hidden");
+      playersScreen.classList.add("hidden");
       gameScreen.classList.add("hidden");
+      return;
+    }
+
+    if (namesSetupActive || !state.gameStarted) {
+      introScreen.classList.add("hidden");
+      setupScreen.classList.add("hidden");
+      playersScreen.classList.remove("hidden");
+      gameScreen.classList.add("hidden");
+      renderPlayerNameFields();
       return;
     }
 
     introScreen.classList.add("hidden");
     setupScreen.classList.add("hidden");
+    playersScreen.classList.add("hidden");
     gameScreen.classList.remove("hidden");
     renderTable();
+  }
+
+  function renderPlayerNameFields() {
+    playerNameFields.innerHTML = "";
+
+    state.players.forEach((playerName, playerIndex) => {
+      const field = document.createElement("label");
+      const caption = document.createElement("span");
+      const input = document.createElement("input");
+
+      field.className = "player-name-field";
+      caption.textContent = `Игрок ${playerIndex + 1}`;
+      input.type = "text";
+      input.maxLength = 24;
+      input.autocomplete = "off";
+      input.value = playerName;
+      input.dataset.playerIndex = String(playerIndex);
+      input.addEventListener("input", handleInitialNameInput);
+      input.addEventListener("keydown", handleInitialNameKeydown);
+
+      field.appendChild(caption);
+      field.appendChild(input);
+      playerNameFields.appendChild(field);
+    });
+  }
+
+  function handleInitialNameInput(event) {
+    const playerIndex = Number(event.target.dataset.playerIndex);
+    state.players[playerIndex] = event.target.value;
+    saveState();
+  }
+
+  function handleInitialNameKeydown(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const inputs = Array.from(playerNameFields.querySelectorAll("input"));
+      const currentIndex = inputs.indexOf(event.target);
+      const nextInput = inputs[currentIndex + 1];
+
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.select();
+        return;
+      }
+
+      continueToGame();
+    }
+  }
+
+  function continueToGame() {
+    state.players = state.players.map((playerName, index) => playerName.trim() || `Игрок ${index + 1}`);
+    namesSetupActive = false;
+    state.gameStarted = true;
+    saveState();
+    render();
+  }
+
+  function backToPlayerCount() {
+    state.playerCount = 0;
+    state.players = [];
+    state.scores = {};
+    state.gameStarted = false;
+    namesSetupActive = false;
+    localStorage.removeItem(STORAGE_KEY);
+    render();
   }
 
   function renderTable() {
@@ -374,6 +462,7 @@
       state.playerCount = parsed.playerCount;
       state.players = parsed.players;
       state.scores = parsed.scores || {};
+      state.gameStarted = typeof parsed.gameStarted === "boolean" ? parsed.gameStarted : true;
       normalizeScores();
     } catch (error) {
       localStorage.removeItem(STORAGE_KEY);
@@ -414,7 +503,9 @@
     state.playerCount = 0;
     state.players = [];
     state.scores = {};
+    state.gameStarted = false;
     introSeen = false;
+    namesSetupActive = false;
     render();
   }
 
@@ -422,6 +513,8 @@
     introSeen = true;
     render();
   });
+  backToCountBtn.addEventListener("click", backToPlayerCount);
+  continueToGameBtn.addEventListener("click", continueToGame);
   newGameBtn.addEventListener("click", newGame);
   saveBtn.addEventListener("click", saveState);
   resetBtn.addEventListener("click", resetGame);

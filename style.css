@@ -134,13 +134,15 @@ h2 {
 }
 
 .intro-screen,
+.players-screen,
 .setup-screen {
   display: grid;
   gap: 14px;
   padding: 16px 0;
 }
 
-.intro-panel {
+.intro-panel,
+.players-panel {
   display: grid;
   gap: 14px;
   padding: 18px;
@@ -167,6 +169,46 @@ h2 {
 .intro-start {
   width: 100%;
   margin-top: 2px;
+}
+
+.player-name-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.player-name-field {
+  display: grid;
+  gap: 6px;
+}
+
+.player-name-field span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.player-name-field input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input);
+  color: var(--text);
+  padding: 0 12px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.player-name-field input:focus {
+  border-color: rgba(139, 92, 246, 0.8);
+  outline: 2px solid rgba(139, 92, 246, 0.34);
+  outline-offset: 0;
+}
+
+.players-actions {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 8px;
 }
 
 .player-options {
@@ -479,7 +521,8 @@ h2 {
     padding: 7px 8px;
   }
 
-  .intro-panel {
+  .intro-panel,
+  .players-panel {
     gap: 12px;
     padding: 14px;
   }
@@ -576,7 +619,8 @@ h2 {
     font-size: 28px;
   }
 
-  .intro-panel {
+  .intro-panel,
+  .players-panel {
     width: min(100%, 620px);
     margin: 18px auto 0;
     padding: 22px;
