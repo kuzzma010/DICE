@@ -9,8 +9,8 @@
   <body>
     <div class="app">
       <header class="app-header">
-        <div>
-          <p class="eyebrow">Telegram Mini App</p>
+        <div class="title-block">
+          <p class="eyebrow">Dice Poker</p>
           <h1>Покер на костях</h1>
         </div>
         <div class="header-total" aria-live="polite">
@@ -20,6 +20,20 @@
       </header>
 
       <main>
+        <section id="introScreen" class="intro-screen" aria-labelledby="introTitle">
+          <div class="intro-panel">
+            <h2 id="introTitle">Как играть</h2>
+            <ul class="rules-list">
+              <li>Выберите от 2 до 6 игроков.</li>
+              <li>Заполняйте очки в строках категорий для каждого игрока.</li>
+              <li>Строки 1-6 суммируются и умножаются на 10.</li>
+              <li>MS, BS, F, K и Покер получают бонус, если введено не 0.</li>
+              <li>Имена игроков можно менять нажатием на заголовок колонки.</li>
+            </ul>
+            <button type="button" id="startBtn" class="accent intro-start">Начать</button>
+          </div>
+        </section>
+
         <section id="setupScreen" class="setup-screen" aria-labelledby="setupTitle">
           <h2 id="setupTitle">Количество игроков</h2>
           <div class="player-options" id="playerOptions" role="group" aria-label="Выбор количества игроков"></div>

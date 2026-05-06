@@ -49,12 +49,14 @@
     scores: {},
   };
 
+  const introScreen = document.getElementById("introScreen");
   const setupScreen = document.getElementById("setupScreen");
   const gameScreen = document.getElementById("gameScreen");
   const playerOptions = document.getElementById("playerOptions");
   const playersCountLabel = document.getElementById("playersCountLabel");
   const tableHead = document.getElementById("tableHead");
   const tableBody = document.getElementById("tableBody");
+  const startBtn = document.getElementById("startBtn");
   const newGameBtn = document.getElementById("newGameBtn");
   const saveBtn = document.getElementById("saveBtn");
   const resetBtn = document.getElementById("resetBtn");
@@ -64,6 +66,7 @@
   const cancelNameBtn = document.getElementById("cancelNameBtn");
 
   let editingPlayerIndex = null;
+  let introSeen = false;
 
   initTelegram();
   createPlayerButtons();
@@ -122,12 +125,21 @@
   function render() {
     playersCountLabel.textContent = String(state.playerCount);
 
+    if (!introSeen && !state.playerCount) {
+      introScreen.classList.remove("hidden");
+      setupScreen.classList.add("hidden");
+      gameScreen.classList.add("hidden");
+      return;
+    }
+
     if (!state.playerCount) {
+      introScreen.classList.add("hidden");
       setupScreen.classList.remove("hidden");
       gameScreen.classList.add("hidden");
       return;
     }
 
+    introScreen.classList.add("hidden");
     setupScreen.classList.add("hidden");
     gameScreen.classList.remove("hidden");
     renderTable();
@@ -185,7 +197,8 @@
           const input = document.createElement("input");
           input.className = "score-input";
           input.type = "text";
-          input.inputMode = "decimal";
+          input.inputMode = "text";
+          input.pattern = "-?[0-9]*";
           input.value = getScoreValue(playerIndex, category.id);
           input.dataset.playerIndex = String(playerIndex);
           input.dataset.categoryId = category.id;
@@ -366,9 +379,14 @@
     state.playerCount = 0;
     state.players = [];
     state.scores = {};
+    introSeen = false;
     render();
   }
 
+  startBtn.addEventListener("click", () => {
+    introSeen = true;
+    render();
+  });
   newGameBtn.addEventListener("click", newGame);
   saveBtn.addEventListener("click", saveState);
   resetBtn.addEventListener("click", resetGame);
