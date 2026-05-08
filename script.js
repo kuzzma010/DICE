@@ -106,6 +106,8 @@
   let isPollingOnlineState = false;
   let syncTimer = null;
   let pollTimer = null;
+  let lastLocalScoreEditAt = 0;
+  let hasPendingScoreEdit = false;
 
   initTelegram();
   createPlayerButtons();
@@ -523,7 +525,6 @@
           input.addEventListener("input", handleScoreInput);
           input.addEventListener("beforeinput", handleScoreBeforeInput);
           input.addEventListener("keydown", handleScoreKeydown);
-          input.addEventListener("keyup", handleScoreKeydown);
           input.addEventListener("blur", handleScoreBlur);
           cell.appendChild(input);
         } else {
@@ -554,27 +555,45 @@
     const cleanValue = normalizeScoreInput(input.value);
 
     input.value = cleanValue;
+    lastLocalScoreEditAt = Date.now();
+    hasPendingScoreEdit = true;
     state.scores[playerIndex][categoryId] = cleanValue;
-    saveState();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     updateTotalsOnly();
   }
 
   function handleScoreBeforeInput(event) {
     if (event.inputType === "insertLineBreak") {
       event.preventDefault();
-      event.target.blur();
+      commitScoreInput(event.target);
     }
   }
 
   function handleScoreKeydown(event) {
     if (event.key === "Enter") {
       event.preventDefault();
-      event.target.blur();
+      commitScoreInput(event.target);
     }
   }
 
   function handleScoreBlur() {
-    if (state.isOnline && state.gameId) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  async function commitScoreInput(input) {
+    input.blur();
+
+    if (!state.isOnline || !state.gameId) {
+      hasPendingScoreEdit = false;
+      saveState();
+      return;
+    }
+
+    window.clearTimeout(syncTimer);
+    const ok = await syncOnlineState();
+
+    if (ok) {
+      hasPendingScoreEdit = false;
       window.setTimeout(() => loadOnlineGame(state.gameId, { force: true }), 500);
     }
   }
@@ -677,7 +696,7 @@
     window.clearTimeout(syncTimer);
     syncTimer = window.setTimeout(() => {
       syncOnlineState();
-    }, 250);
+    }, 900);
   }
 
   async function syncOnlineState(isInitialCreate = false) {
@@ -762,6 +781,10 @@
       (document.activeElement.classList.contains("score-input") || playerNameFields.contains(document.activeElement)) &&
       !options.force
     ) {
+      return false;
+    }
+
+    if (!options.force && (hasPendingScoreEdit || Date.now() - lastLocalScoreEditAt < 1500)) {
       return false;
     }
 
