@@ -1,6 +1,12 @@
 (function () {
   const STORAGE_KEY = "dicePokerTelegramAppState";
+  const SUPABASE_URL = "https://nntczgqazcwecrgbpwnl.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_HSOdAIIx84jYiM67vVOn9A_yIBVKutA";
   const tg = window.Telegram && window.Telegram.WebApp;
+  const supabaseClient =
+    SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
 
   const categories = [
     { id: "ones", label: "1", type: "input", groupStart: false },
@@ -45,6 +51,8 @@
 
   const state = {
     version: "",
+    gameId: "",
+    isOnline: false,
     playerCount: 0,
     players: [],
     scores: {},
@@ -53,6 +61,7 @@
 
   const versionScreen = document.getElementById("versionScreen");
   const introScreen = document.getElementById("introScreen");
+  const onlineScreen = document.getElementById("onlineScreen");
   const setupScreen = document.getElementById("setupScreen");
   const playersScreen = document.getElementById("playersScreen");
   const gameScreen = document.getElementById("gameScreen");
@@ -63,6 +72,17 @@
   const tableHead = document.getElementById("tableHead");
   const tableBody = document.getElementById("tableBody");
   const startBtn = document.getElementById("startBtn");
+  const showOnlineBtn = document.getElementById("showOnlineBtn");
+  const backToIntroBtn = document.getElementById("backToIntroBtn");
+  const createOnlineGameBtn = document.getElementById("createOnlineGameBtn");
+  const continueOnlineSetupBtn = document.getElementById("continueOnlineSetupBtn");
+  const onlineShareBox = document.getElementById("onlineShareBox");
+  const onlineShareLink = document.getElementById("onlineShareLink");
+  const copyOnlineLinkBtn = document.getElementById("copyOnlineLinkBtn");
+  const onlineStatus = document.getElementById("onlineStatus");
+  const onlineGameBar = document.getElementById("onlineGameBar");
+  const onlineGameLabel = document.getElementById("onlineGameLabel");
+  const copyGameLinkBtn = document.getElementById("copyGameLinkBtn");
   const backToCountBtn = document.getElementById("backToCountBtn");
   const continueToGameBtn = document.getElementById("continueToGameBtn");
   const newGameBtn = document.getElementById("newGameBtn");
@@ -78,11 +98,17 @@
 
   let editingPlayerIndex = null;
   let introSeen = false;
+  let onlineSetupActive = false;
   let namesSetupActive = false;
+  let realtimeChannel = null;
+  let realtimeGameId = "";
+  let isApplyingRemoteState = false;
+  let syncTimer = null;
 
   initTelegram();
   createPlayerButtons();
   loadState();
+  openGameFromUrl();
   render();
 
   function initTelegram() {
@@ -142,10 +168,12 @@
   function render() {
     playersCountLabel.textContent = String(state.playerCount);
     document.documentElement.style.setProperty("--player-count", String(state.playerCount || 2));
+    updateOnlineBar();
 
     if (!state.version) {
       versionScreen.classList.remove("hidden");
       introScreen.classList.add("hidden");
+      onlineScreen.classList.add("hidden");
       setupScreen.classList.add("hidden");
       playersScreen.classList.add("hidden");
       gameScreen.classList.add("hidden");
@@ -156,6 +184,18 @@
     if (!introSeen && !state.playerCount) {
       versionScreen.classList.add("hidden");
       introScreen.classList.remove("hidden");
+      onlineScreen.classList.add("hidden");
+      setupScreen.classList.add("hidden");
+      playersScreen.classList.add("hidden");
+      gameScreen.classList.add("hidden");
+      app.classList.remove("is-game-active");
+      return;
+    }
+
+    if (onlineSetupActive) {
+      versionScreen.classList.add("hidden");
+      introScreen.classList.add("hidden");
+      onlineScreen.classList.remove("hidden");
       setupScreen.classList.add("hidden");
       playersScreen.classList.add("hidden");
       gameScreen.classList.add("hidden");
@@ -166,6 +206,7 @@
     if (!state.playerCount) {
       versionScreen.classList.add("hidden");
       introScreen.classList.add("hidden");
+      onlineScreen.classList.add("hidden");
       setupScreen.classList.remove("hidden");
       playersScreen.classList.add("hidden");
       gameScreen.classList.add("hidden");
@@ -176,6 +217,7 @@
     if (namesSetupActive || !state.gameStarted) {
       versionScreen.classList.add("hidden");
       introScreen.classList.add("hidden");
+      onlineScreen.classList.add("hidden");
       setupScreen.classList.add("hidden");
       playersScreen.classList.remove("hidden");
       gameScreen.classList.add("hidden");
@@ -186,6 +228,7 @@
 
     versionScreen.classList.add("hidden");
     introScreen.classList.add("hidden");
+    onlineScreen.classList.add("hidden");
     setupScreen.classList.add("hidden");
     playersScreen.classList.add("hidden");
     gameScreen.classList.remove("hidden");
@@ -197,6 +240,141 @@
     state.version = version;
     saveState();
     render();
+  }
+
+  function showOnlineScreen() {
+    onlineSetupActive = true;
+    createOnlineGameBtn.classList.remove("hidden");
+    continueOnlineSetupBtn.classList.add("hidden");
+    onlineShareBox.classList.add("hidden");
+    onlineShareLink.value = "";
+    onlineStatus.textContent = supabaseClient
+      ? ""
+      : "Supabase не настроен. Заполните SUPABASE_URL и SUPABASE_ANON_KEY в script.js.";
+    render();
+  }
+
+  function backToIntro() {
+    onlineSetupActive = false;
+    render();
+  }
+
+  async function createOnlineGame() {
+    if (!supabaseClient) {
+      onlineStatus.textContent = "Supabase не настроен. Онлайн-режим пока недоступен.";
+      return;
+    }
+
+    state.gameId = generateGameId();
+    state.isOnline = true;
+    state.playerCount = 0;
+    state.players = [];
+    state.scores = {};
+    state.gameStarted = false;
+    namesSetupActive = false;
+
+    onlineStatus.textContent = "Создаю онлайн-игру...";
+    const ok = await syncOnlineState(true);
+
+    if (!ok) {
+      onlineStatus.textContent = "Не удалось создать онлайн-игру. Проверьте настройки Supabase.";
+      return;
+    }
+
+    setGameUrl(state.gameId);
+    showShareLink();
+    onlineStatus.textContent = "Онлайн-игра создана.";
+    introSeen = true;
+    saveState();
+    subscribeToOnlineGame();
+    createOnlineGameBtn.classList.add("hidden");
+    continueOnlineSetupBtn.classList.remove("hidden");
+  }
+
+  function continueOnlineSetup() {
+    onlineSetupActive = false;
+    introSeen = true;
+    render();
+  }
+
+  function generateGameId() {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let id = "";
+
+    for (let index = 0; index < 8; index += 1) {
+      id += alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+
+    return id;
+  }
+
+  function showShareLink() {
+    if (!state.gameId) {
+      return;
+    }
+
+    onlineShareLink.value = getGameUrl(state.gameId);
+    onlineShareBox.classList.remove("hidden");
+  }
+
+  function updateOnlineBar() {
+    const isOnlineGame = Boolean(state.isOnline && state.gameId);
+
+    onlineGameBar.classList.toggle("hidden", !isOnlineGame);
+
+    if (isOnlineGame) {
+      onlineGameLabel.textContent = `Онлайн-игра ${state.gameId}`;
+    }
+  }
+
+  async function copyOnlineLink() {
+    const link = onlineShareLink.value || (state.gameId ? getGameUrl(state.gameId) : "");
+
+    if (!link) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(link);
+      onlineStatus.textContent = "Ссылка скопирована.";
+    } catch (error) {
+      onlineShareLink.select();
+      onlineStatus.textContent = "Скопируйте ссылку вручную.";
+    }
+  }
+
+  function getGameUrl(gameId) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("game", gameId);
+    return url.toString();
+  }
+
+  function setGameUrl(gameId) {
+    const url = new URL(window.location.href);
+
+    if (gameId) {
+      url.searchParams.set("game", gameId);
+    } else {
+      url.searchParams.delete("game");
+    }
+
+    window.history.replaceState({}, "", url.toString());
+  }
+
+  async function openGameFromUrl() {
+    const gameId = new URLSearchParams(window.location.search).get("game");
+
+    if (!gameId) {
+      return;
+    }
+
+    if (!supabaseClient) {
+      state.gameId = gameId;
+      state.isOnline = false;
+      return;
+    }
+
+    await loadOnlineGame(gameId);
   }
 
   function renderPlayerNameFields() {
@@ -478,6 +656,174 @@
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+    if (state.isOnline && state.gameId && !isApplyingRemoteState) {
+      scheduleOnlineSync();
+    }
+  }
+
+  function scheduleOnlineSync() {
+    window.clearTimeout(syncTimer);
+    syncTimer = window.setTimeout(() => {
+      syncOnlineState();
+    }, 250);
+  }
+
+  async function syncOnlineState(isInitialCreate = false) {
+    if (!supabaseClient || !state.isOnline || !state.gameId) {
+      return false;
+    }
+
+    const gameRow = {
+      id: state.gameId,
+      version: state.version,
+      player_count: state.playerCount,
+      game_started: state.gameStarted,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: gameError } = await supabaseClient.from("games").upsert(gameRow, { onConflict: "id" });
+
+    if (gameError) {
+      console.error(gameError);
+      return false;
+    }
+
+    if (state.players.length) {
+      const playerRows = state.players.map((name, playerIndex) => ({
+        game_id: state.gameId,
+        player_index: playerIndex,
+        name: name || `Игрок ${playerIndex + 1}`,
+      }));
+      const { error: playersError } = await supabaseClient
+        .from("players")
+        .upsert(playerRows, { onConflict: "game_id,player_index" });
+
+      if (playersError) {
+        console.error(playersError);
+        return false;
+      }
+    }
+
+    const scoreRows = [];
+
+    for (let playerIndex = 0; playerIndex < state.playerCount; playerIndex += 1) {
+      scoringIds.forEach((categoryId) => {
+        scoreRows.push({
+          game_id: state.gameId,
+          player_index: playerIndex,
+          category_id: categoryId,
+          value: getScoreValue(playerIndex, categoryId),
+        });
+      });
+    }
+
+    if (scoreRows.length) {
+      const { error: scoresError } = await supabaseClient
+        .from("scores")
+        .upsert(scoreRows, { onConflict: "game_id,player_index,category_id" });
+
+      if (scoresError) {
+        console.error(scoresError);
+        return false;
+      }
+    }
+
+    if (!isInitialCreate) {
+      onlineStatus.textContent = "Онлайн-игра синхронизирована.";
+    }
+
+    return true;
+  }
+
+  async function loadOnlineGame(gameId) {
+    if (!supabaseClient) {
+      return false;
+    }
+
+    const { data: game, error: gameError } = await supabaseClient.from("games").select("*").eq("id", gameId).single();
+
+    if (gameError || !game) {
+      console.error(gameError);
+      onlineStatus.textContent = "Онлайн-игра не найдена.";
+      return false;
+    }
+
+    const [{ data: players }, { data: scores }] = await Promise.all([
+      supabaseClient.from("players").select("*").eq("game_id", gameId).order("player_index"),
+      supabaseClient.from("scores").select("*").eq("game_id", gameId),
+    ]);
+
+    isApplyingRemoteState = true;
+    state.gameId = game.id;
+    state.isOnline = true;
+    state.version = game.version || "kuzma";
+    state.playerCount = Number(game.player_count) || 0;
+    state.players = Array.from({ length: state.playerCount }, (_, index) => `Игрок ${index + 1}`);
+    state.scores = {};
+    state.gameStarted = Boolean(game.game_started);
+    introSeen = true;
+    onlineSetupActive = false;
+    namesSetupActive = state.playerCount > 0 && !state.gameStarted;
+
+    for (let playerIndex = 0; playerIndex < state.playerCount; playerIndex += 1) {
+      state.scores[playerIndex] = {};
+      scoringIds.forEach((categoryId) => {
+        state.scores[playerIndex][categoryId] = "";
+      });
+    }
+
+    (players || []).forEach((player) => {
+      state.players[player.player_index] = player.name;
+    });
+
+    (scores || []).forEach((score) => {
+      if (!state.scores[score.player_index]) {
+        state.scores[score.player_index] = {};
+      }
+
+      state.scores[score.player_index][score.category_id] = score.value || "";
+    });
+
+    saveState();
+    isApplyingRemoteState = false;
+    subscribeToOnlineGame();
+    render();
+    return true;
+  }
+
+  function subscribeToOnlineGame() {
+    if (!supabaseClient || !state.gameId) {
+      return;
+    }
+
+    if (realtimeChannel && realtimeGameId === state.gameId) {
+      return;
+    }
+
+    if (realtimeChannel) {
+      supabaseClient.removeChannel(realtimeChannel);
+    }
+
+    realtimeGameId = state.gameId;
+    realtimeChannel = supabaseClient
+      .channel(`dice-poker-${state.gameId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "games", filter: `id=eq.${state.gameId}` },
+        () => loadOnlineGame(state.gameId)
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "players", filter: `game_id=eq.${state.gameId}` },
+        () => loadOnlineGame(state.gameId)
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scores", filter: `game_id=eq.${state.gameId}` },
+        () => loadOnlineGame(state.gameId)
+      )
+      .subscribe();
   }
 
   function loadState() {
@@ -495,6 +841,8 @@
       }
 
       state.version = typeof parsed.version === "string" ? parsed.version : "";
+      state.gameId = typeof parsed.gameId === "string" ? parsed.gameId : "";
+      state.isOnline = Boolean(parsed.isOnline && state.gameId);
       state.playerCount = Number(parsed.playerCount) || 0;
       state.players = Array.isArray(parsed.players) ? parsed.players : [];
       state.scores = parsed.scores || {};
@@ -551,13 +899,23 @@
   }
 
   function newGame() {
+    if (realtimeChannel && supabaseClient) {
+      supabaseClient.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+      realtimeGameId = "";
+    }
+
+    setGameUrl("");
     localStorage.removeItem(STORAGE_KEY);
     state.version = "";
+    state.gameId = "";
+    state.isOnline = false;
     state.playerCount = 0;
     state.players = [];
     state.scores = {};
     state.gameStarted = false;
     introSeen = false;
+    onlineSetupActive = false;
     namesSetupActive = false;
     render();
   }
@@ -566,6 +924,12 @@
     introSeen = true;
     render();
   });
+  showOnlineBtn.addEventListener("click", showOnlineScreen);
+  backToIntroBtn.addEventListener("click", backToIntro);
+  createOnlineGameBtn.addEventListener("click", createOnlineGame);
+  continueOnlineSetupBtn.addEventListener("click", continueOnlineSetup);
+  copyOnlineLinkBtn.addEventListener("click", copyOnlineLink);
+  copyGameLinkBtn.addEventListener("click", copyOnlineLink);
   versionButtons.forEach((button) => {
     button.addEventListener("click", () => chooseVersion(button.dataset.version));
   });

@@ -43,7 +43,28 @@
               <li>П - пара/покер, ПП - две пары, С - сет, МС - малый стрит, БС - большой стрит, Ф - фулл-хаус, К - каре, М - мусор.</li>
               <li>Имена игроков можно менять нажатием на заголовок колонки.</li>
             </ul>
-            <button type="button" id="startBtn" class="accent intro-start">Начать</button>
+            <div class="intro-actions">
+              <button type="button" id="startBtn" class="accent intro-start">Начать офлайн</button>
+              <button type="button" id="showOnlineBtn">Создать онлайн-игру</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="onlineScreen" class="online-screen hidden" aria-labelledby="onlineTitle">
+          <div class="online-panel">
+            <h2 id="onlineTitle">Создать онлайн-игру</h2>
+            <p class="screen-text">Онлайн-игра сохраняет очки в Supabase и обновляет таблицу у всех участников по ссылке.</p>
+            <div class="online-actions">
+              <button type="button" id="backToIntroBtn">Назад</button>
+              <button type="button" id="createOnlineGameBtn" class="accent">Создать игру</button>
+              <button type="button" id="continueOnlineSetupBtn" class="accent hidden">Дальше</button>
+            </div>
+            <div id="onlineShareBox" class="share-box hidden">
+              <span>Ссылка на игру</span>
+              <input id="onlineShareLink" type="text" readonly />
+              <button type="button" id="copyOnlineLinkBtn">Копировать</button>
+            </div>
+            <p id="onlineStatus" class="online-status" aria-live="polite"></p>
           </div>
         </section>
 
@@ -67,6 +88,11 @@
           <div class="toolbar">
             <button type="button" id="newGameBtn">Новая игра</button>
             <button type="button" id="resetBtn" class="danger">Сбросить игру</button>
+          </div>
+
+          <div id="onlineGameBar" class="online-game-bar hidden">
+            <span id="onlineGameLabel">Онлайн</span>
+            <button type="button" id="copyGameLinkBtn">Ссылка</button>
           </div>
 
           <div class="table-shell">
@@ -102,6 +128,7 @@
       </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
   </body>
 </html>

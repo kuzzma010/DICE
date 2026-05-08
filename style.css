@@ -139,6 +139,7 @@ h2 {
 
 .version-screen,
 .intro-screen,
+.online-screen,
 .players-screen,
 .setup-screen {
   display: grid;
@@ -148,6 +149,7 @@ h2 {
 
 .version-panel,
 .intro-panel,
+.online-panel,
 .players-panel {
   display: grid;
   gap: 14px;
@@ -172,9 +174,54 @@ h2 {
   color: var(--accent-strong);
 }
 
+.intro-actions,
+.online-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.online-actions .hidden {
+  display: none;
+}
+
 .intro-start {
   width: 100%;
   margin-top: 2px;
+}
+
+.screen-text,
+.online-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.share-box {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.share-box span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.share-box input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input);
+  color: var(--text);
+  padding: 0 10px;
+  font-size: 14px;
 }
 
 .version-options {
@@ -267,6 +314,33 @@ h2 {
 
 .toolbar .danger {
   grid-column: auto;
+}
+
+.online-game-bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.online-game-bar span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.online-game-bar button {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
 }
 
 .accent {
@@ -546,6 +620,7 @@ h2 {
 
   .version-panel,
   .intro-panel,
+  .online-panel,
   .players-panel {
     gap: 12px;
     padding: 14px;
@@ -653,6 +728,7 @@ h2 {
 
   .version-panel,
   .intro-panel,
+  .online-panel,
   .players-panel {
     width: min(100%, 620px);
     margin: 18px auto 0;
