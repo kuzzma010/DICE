@@ -277,7 +277,9 @@
     const ok = await syncOnlineState(true);
 
     if (!ok) {
-      onlineStatus.textContent = "Не удалось создать онлайн-игру. Проверьте настройки Supabase.";
+      if (!onlineStatus.textContent.startsWith("Ошибка Supabase")) {
+        onlineStatus.textContent = "Не удалось создать онлайн-игру. Проверьте настройки Supabase.";
+      }
       return;
     }
 
@@ -686,6 +688,7 @@
 
     if (gameError) {
       console.error(gameError);
+      onlineStatus.textContent = `Ошибка Supabase games: ${gameError.message || gameError.code || "нет доступа"}`;
       return false;
     }
 
@@ -701,6 +704,7 @@
 
       if (playersError) {
         console.error(playersError);
+        onlineStatus.textContent = `Ошибка Supabase players: ${playersError.message || playersError.code || "нет доступа"}`;
         return false;
       }
     }
@@ -725,6 +729,7 @@
 
       if (scoresError) {
         console.error(scoresError);
+        onlineStatus.textContent = `Ошибка Supabase scores: ${scoresError.message || scoresError.code || "нет доступа"}`;
         return false;
       }
     }
