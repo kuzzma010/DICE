@@ -103,7 +103,9 @@
   let realtimeChannel = null;
   let realtimeGameId = "";
   let isApplyingRemoteState = false;
+  let isPollingOnlineState = false;
   let syncTimer = null;
+  let pollTimer = null;
 
   initTelegram();
   createPlayerButtons();
@@ -522,6 +524,7 @@
           input.addEventListener("beforeinput", handleScoreBeforeInput);
           input.addEventListener("keydown", handleScoreKeydown);
           input.addEventListener("keyup", handleScoreKeydown);
+          input.addEventListener("blur", handleScoreBlur);
           cell.appendChild(input);
         } else {
           const value = category.type === "summary" ? getUpperSum(playerIndex) : getGrandTotal(playerIndex);
@@ -567,6 +570,12 @@
     if (event.key === "Enter") {
       event.preventDefault();
       event.target.blur();
+    }
+  }
+
+  function handleScoreBlur() {
+    if (state.isOnline && state.gameId) {
+      window.setTimeout(() => loadOnlineGame(state.gameId, { force: true }), 500);
     }
   }
 
@@ -738,11 +747,17 @@
       onlineStatus.textContent = "Онлайн-игра синхронизирована.";
     }
 
+    startOnlinePolling();
+
     return true;
   }
 
-  async function loadOnlineGame(gameId) {
+  async function loadOnlineGame(gameId, options = {}) {
     if (!supabaseClient) {
+      return false;
+    }
+
+    if (document.activeElement && document.activeElement.classList.contains("score-input") && !options.force) {
       return false;
     }
 
@@ -793,6 +808,7 @@
     saveState();
     isApplyingRemoteState = false;
     subscribeToOnlineGame();
+    startOnlinePolling();
     render();
     return true;
   }
@@ -829,6 +845,34 @@
         () => loadOnlineGame(state.gameId)
       )
       .subscribe();
+
+    startOnlinePolling();
+  }
+
+  function startOnlinePolling() {
+    if (!supabaseClient || !state.isOnline || !state.gameId || pollTimer) {
+      return;
+    }
+
+    pollTimer = window.setInterval(() => {
+      if (!state.isOnline || !state.gameId || isApplyingRemoteState || isPollingOnlineState) {
+        return;
+      }
+
+      isPollingOnlineState = true;
+      loadOnlineGame(state.gameId)
+        .catch((error) => console.error(error))
+        .finally(() => {
+          isPollingOnlineState = false;
+        });
+    }, 2500);
+  }
+
+  function stopOnlinePolling() {
+    if (pollTimer) {
+      window.clearInterval(pollTimer);
+      pollTimer = null;
+    }
   }
 
   function loadState() {
@@ -904,6 +948,8 @@
   }
 
   function newGame() {
+    stopOnlinePolling();
+
     if (realtimeChannel && supabaseClient) {
       supabaseClient.removeChannel(realtimeChannel);
       realtimeChannel = null;
