@@ -181,10 +181,10 @@
       return;
     }
 
-    if (!introSeen && !state.playerCount) {
+    if (onlineSetupActive) {
       versionScreen.classList.add("hidden");
-      introScreen.classList.remove("hidden");
-      onlineScreen.classList.add("hidden");
+      introScreen.classList.add("hidden");
+      onlineScreen.classList.remove("hidden");
       setupScreen.classList.add("hidden");
       playersScreen.classList.add("hidden");
       gameScreen.classList.add("hidden");
@@ -192,10 +192,10 @@
       return;
     }
 
-    if (onlineSetupActive) {
+    if (!introSeen && !state.playerCount) {
       versionScreen.classList.add("hidden");
-      introScreen.classList.add("hidden");
-      onlineScreen.classList.remove("hidden");
+      introScreen.classList.remove("hidden");
+      onlineScreen.classList.add("hidden");
       setupScreen.classList.add("hidden");
       playersScreen.classList.add("hidden");
       gameScreen.classList.add("hidden");
