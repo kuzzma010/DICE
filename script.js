@@ -408,7 +408,7 @@
   function handleInitialNameInput(event) {
     const playerIndex = Number(event.target.dataset.playerIndex);
     state.players[playerIndex] = event.target.value;
-    saveState();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
   function handleInitialNameKeydown(event) {
@@ -757,7 +757,11 @@
       return false;
     }
 
-    if (document.activeElement && document.activeElement.classList.contains("score-input") && !options.force) {
+    if (
+      document.activeElement &&
+      (document.activeElement.classList.contains("score-input") || playerNameFields.contains(document.activeElement)) &&
+      !options.force
+    ) {
       return false;
     }
 
