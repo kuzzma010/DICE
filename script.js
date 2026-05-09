@@ -905,7 +905,7 @@
     return category.label;
   }
 
-  function writeDiceResult() {
+  async function writeDiceResult() {
     if (diceState.rollCount === 0) {
       return;
     }
@@ -933,9 +933,29 @@
 
     state.scores[playerIndex][categoryId] = String(result);
     hasPendingScoreEdit = false;
-    saveState();
+    lastLocalScoreEditAt = Date.now();
     renderTable();
-    closeDiceModal();
+
+    if (!state.isOnline || !state.gameId) {
+      saveState();
+      closeDiceModal();
+      return;
+    }
+
+    window.clearTimeout(syncTimer);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    isCommittingScoreEdit = true;
+
+    try {
+      const ok = await syncOnlineState();
+
+      if (ok) {
+        await loadOnlineGame(state.gameId, { force: true });
+      }
+    } finally {
+      isCommittingScoreEdit = false;
+      closeDiceModal();
+    }
   }
 
   function renderTable() {
