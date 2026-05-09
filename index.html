@@ -88,6 +88,7 @@
           <div class="toolbar">
             <button type="button" id="newGameBtn">Новая игра</button>
             <button type="button" id="resetBtn" class="danger">Сбросить игру</button>
+            <button type="button" id="openDiceBtn" class="dice-open-btn">🎲 Бросить кости</button>
           </div>
 
           <div id="onlineGameBar" class="online-game-bar hidden">
@@ -124,6 +125,50 @@
         <div class="modal-actions">
           <button type="button" id="cancelResetBtn">Отмена</button>
           <button type="button" id="confirmResetBtn" class="danger">Сбросить</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="diceModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="diceModalTitle">
+      <div class="modal-card dice-card">
+        <div class="dice-header">
+          <h2 id="diceModalTitle">Виртуальные кости</h2>
+          <button type="button" id="closeDiceBtn" class="icon-close" aria-label="Закрыть">×</button>
+        </div>
+
+        <p id="diceRollCounter" class="dice-counter">Бросок 0 из 3</p>
+        <div id="diceSet" class="dice-set" aria-label="Кости"></div>
+        <p id="diceHint" class="dice-hint">Нажмите “Бросить”, чтобы начать ход.</p>
+
+        <div class="dice-analysis">
+          <div>
+            <span>Значения</span>
+            <strong id="diceValues">-</strong>
+          </div>
+          <div>
+            <span>Сумма</span>
+            <strong id="diceSum">0</strong>
+          </div>
+          <div>
+            <span>Комбинация</span>
+            <strong id="diceCombo">-</strong>
+          </div>
+        </div>
+
+        <div class="dice-actions">
+          <button type="button" id="rollDiceBtn" class="accent">Бросить</button>
+          <button type="button" id="rerollDiceBtn">Перекинуть выбранные</button>
+          <button type="button" id="writeDiceBtn" class="accent">Записать результат</button>
+        </div>
+
+        <div id="diceWritePanel" class="dice-write-panel hidden">
+          <label for="dicePlayerSelect">Игрок</label>
+          <select id="dicePlayerSelect"></select>
+
+          <label for="diceCategorySelect">Категория</label>
+          <select id="diceCategorySelect"></select>
+
+          <button type="button" id="confirmDiceWriteBtn" class="accent">Записать в таблицу</button>
         </div>
       </div>
     </div>

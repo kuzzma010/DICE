@@ -48,6 +48,8 @@
     poker: 50,
   };
   const scoringIds = categories.filter((category) => category.type === "input").map((category) => category.id);
+  const diceSymbols = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+  const diceCategoryOptions = categories.filter((category) => category.type === "input");
 
   const state = {
     version: "",
@@ -87,13 +89,29 @@
   const continueToGameBtn = document.getElementById("continueToGameBtn");
   const newGameBtn = document.getElementById("newGameBtn");
   const resetBtn = document.getElementById("resetBtn");
+  const openDiceBtn = document.getElementById("openDiceBtn");
   const nameModal = document.getElementById("nameModal");
   const resetModal = document.getElementById("resetModal");
+  const diceModal = document.getElementById("diceModal");
   const playerNameInput = document.getElementById("playerNameInput");
   const saveNameBtn = document.getElementById("saveNameBtn");
   const cancelNameBtn = document.getElementById("cancelNameBtn");
   const confirmResetBtn = document.getElementById("confirmResetBtn");
   const cancelResetBtn = document.getElementById("cancelResetBtn");
+  const closeDiceBtn = document.getElementById("closeDiceBtn");
+  const rollDiceBtn = document.getElementById("rollDiceBtn");
+  const rerollDiceBtn = document.getElementById("rerollDiceBtn");
+  const writeDiceBtn = document.getElementById("writeDiceBtn");
+  const confirmDiceWriteBtn = document.getElementById("confirmDiceWriteBtn");
+  const diceSet = document.getElementById("diceSet");
+  const diceRollCounter = document.getElementById("diceRollCounter");
+  const diceHint = document.getElementById("diceHint");
+  const diceValues = document.getElementById("diceValues");
+  const diceSum = document.getElementById("diceSum");
+  const diceCombo = document.getElementById("diceCombo");
+  const diceWritePanel = document.getElementById("diceWritePanel");
+  const dicePlayerSelect = document.getElementById("dicePlayerSelect");
+  const diceCategorySelect = document.getElementById("diceCategorySelect");
   const versionButtons = document.querySelectorAll(".version-btn");
 
   let editingPlayerIndex = null;
@@ -108,6 +126,12 @@
   let pollTimer = null;
   let lastLocalScoreEditAt = 0;
   let hasPendingScoreEdit = false;
+  const diceState = {
+    values: [0, 0, 0, 0, 0],
+    rerollSelected: [false, false, false, false, false],
+    rollCount: 0,
+    isRolling: false,
+  };
 
   initTelegram();
   createPlayerButtons();
@@ -446,6 +470,225 @@
     namesSetupActive = false;
     saveState();
     render();
+  }
+
+  function openDiceModal() {
+    resetDiceState();
+    populateDiceWriteOptions();
+    diceModal.classList.remove("hidden");
+    renderDicePanel();
+  }
+
+  function closeDiceModal() {
+    diceModal.classList.add("hidden");
+    resetDiceState();
+    renderDicePanel();
+  }
+
+  function resetDiceState() {
+    diceState.values = [0, 0, 0, 0, 0];
+    diceState.rerollSelected = [false, false, false, false, false];
+    diceState.rollCount = 0;
+    diceState.isRolling = false;
+    diceWritePanel.classList.add("hidden");
+  }
+
+  function renderDicePanel() {
+    diceSet.innerHTML = "";
+
+    diceState.values.forEach((value, index) => {
+      const button = document.createElement("button");
+      const label = document.createElement("span");
+
+      button.type = "button";
+      button.className = "die-btn";
+      button.disabled = diceState.rollCount === 0 || diceState.rollCount >= 3 || diceState.isRolling;
+      button.dataset.index = String(index);
+      button.setAttribute("aria-pressed", String(diceState.rerollSelected[index]));
+      button.addEventListener("click", () => toggleDieSelection(index));
+
+      if (diceState.rerollSelected[index]) {
+        button.classList.add("is-selected");
+      }
+
+      if (diceState.isRolling) {
+        button.classList.add("is-rolling");
+      }
+
+      button.textContent = value ? diceSymbols[value] : "🎲";
+      label.textContent = diceState.rerollSelected[index] ? "Перекинуть" : "Оставить";
+      button.appendChild(label);
+      diceSet.appendChild(button);
+    });
+
+    const hasRoll = diceState.rollCount > 0;
+    const hasSelectedDice = diceState.rerollSelected.some(Boolean);
+    const analysis = analyzeDice(diceState.values);
+
+    diceRollCounter.textContent = `Бросок ${diceState.rollCount} из 3`;
+    diceValues.textContent = hasRoll ? diceState.values.join(", ") : "-";
+    diceSum.textContent = String(hasRoll ? analysis.sum : 0);
+    diceCombo.textContent = hasRoll ? analysis.combo : "-";
+
+    rollDiceBtn.classList.toggle("hidden", hasRoll);
+    rerollDiceBtn.classList.toggle("hidden", !hasRoll);
+    writeDiceBtn.classList.toggle("hidden", !hasRoll);
+    rerollDiceBtn.disabled = !hasRoll || diceState.rollCount >= 3 || !hasSelectedDice || diceState.isRolling;
+    writeDiceBtn.disabled = !hasRoll || diceState.isRolling;
+
+    if (!hasRoll) {
+      diceHint.textContent = "Нажмите “Бросить”, чтобы начать ход.";
+    } else if (diceState.rollCount >= 3) {
+      diceHint.textContent = "Броски закончились — запишите результат.";
+    } else if (!hasSelectedDice) {
+      diceHint.textContent = "Выберите кости для переброса или запишите результат.";
+    } else {
+      diceHint.textContent = "Выбранные кости будут перекинуты.";
+    }
+  }
+
+  function toggleDieSelection(index) {
+    if (diceState.rollCount === 0 || diceState.rollCount >= 3 || diceState.isRolling) {
+      return;
+    }
+
+    diceState.rerollSelected[index] = !diceState.rerollSelected[index];
+    renderDicePanel();
+  }
+
+  function rollDice() {
+    if (diceState.rollCount > 0 || diceState.isRolling) {
+      return;
+    }
+
+    performDiceRoll([true, true, true, true, true]);
+  }
+
+  function rerollSelectedDice() {
+    if (diceState.rollCount === 0 || diceState.rollCount >= 3 || diceState.isRolling) {
+      return;
+    }
+
+    if (!diceState.rerollSelected.some(Boolean)) {
+      diceHint.textContent = "Выберите хотя бы одну кость для переброса.";
+      return;
+    }
+
+    performDiceRoll(diceState.rerollSelected);
+  }
+
+  function performDiceRoll(rollMask) {
+    if (diceState.rollCount >= 3) {
+      return;
+    }
+
+    diceState.isRolling = true;
+    renderDicePanel();
+
+    window.setTimeout(() => {
+      diceState.values = diceState.values.map((value, index) => (rollMask[index] ? randomDieValue() : value));
+      diceState.rerollSelected = [false, false, false, false, false];
+      diceState.rollCount += 1;
+      diceState.isRolling = false;
+      diceWritePanel.classList.add("hidden");
+      renderDicePanel();
+    }, 260);
+  }
+
+  function randomDieValue() {
+    return Math.floor(Math.random() * 6) + 1;
+  }
+
+  function analyzeDice(values) {
+    const activeValues = values.filter(Boolean);
+    const sum = activeValues.reduce((total, value) => total + value, 0);
+    const counts = new Map();
+
+    activeValues.forEach((value) => {
+      counts.set(value, (counts.get(value) || 0) + 1);
+    });
+
+    const countValues = Array.from(counts.values()).sort((a, b) => b - a);
+    const unique = Array.from(counts.keys()).sort((a, b) => a - b).join("");
+    let combo = "мусор";
+
+    if (countValues[0] === 5) {
+      combo = "покер";
+    } else if (countValues[0] === 4) {
+      combo = "каре";
+    } else if (countValues[0] === 3 && countValues[1] === 2) {
+      combo = "фулл-хаус";
+    } else if (unique === "12345" || unique === "23456") {
+      combo = "большой стрит";
+    } else if (hasSmallStraight(counts)) {
+      combo = "малый стрит";
+    } else if (countValues[0] === 3) {
+      combo = "сет";
+    } else if (countValues[0] === 2 && countValues[1] === 2) {
+      combo = "две пары";
+    } else if (countValues[0] === 2) {
+      combo = "пара";
+    }
+
+    return { sum, combo };
+  }
+
+  function hasSmallStraight(counts) {
+    const straights = [
+      [1, 2, 3, 4],
+      [2, 3, 4, 5],
+      [3, 4, 5, 6],
+    ];
+
+    return straights.some((straight) => straight.every((value) => counts.has(value)));
+  }
+
+  function showDiceWritePanel() {
+    if (diceState.rollCount === 0) {
+      return;
+    }
+
+    populateDiceWriteOptions();
+    diceWritePanel.classList.remove("hidden");
+  }
+
+  function populateDiceWriteOptions() {
+    dicePlayerSelect.innerHTML = "";
+    diceCategorySelect.innerHTML = "";
+
+    state.players.forEach((playerName, playerIndex) => {
+      const option = document.createElement("option");
+      option.value = String(playerIndex);
+      option.textContent = playerName || `Игрок ${playerIndex + 1}`;
+      dicePlayerSelect.appendChild(option);
+    });
+
+    diceCategoryOptions.forEach((category) => {
+      const option = document.createElement("option");
+      option.value = category.id;
+      option.textContent = category.label;
+      diceCategorySelect.appendChild(option);
+    });
+  }
+
+  function writeDiceResult() {
+    if (diceState.rollCount === 0) {
+      return;
+    }
+
+    const playerIndex = Number(dicePlayerSelect.value);
+    const categoryId = diceCategorySelect.value;
+    const result = analyzeDice(diceState.values).sum;
+
+    if (!state.scores[playerIndex]) {
+      state.scores[playerIndex] = {};
+    }
+
+    state.scores[playerIndex][categoryId] = String(result);
+    hasPendingScoreEdit = false;
+    saveState();
+    renderTable();
+    closeDiceModal();
   }
 
   function renderTable() {
@@ -1015,6 +1258,12 @@
   continueToGameBtn.addEventListener("click", continueToGame);
   newGameBtn.addEventListener("click", newGame);
   resetBtn.addEventListener("click", openResetModal);
+  openDiceBtn.addEventListener("click", openDiceModal);
+  closeDiceBtn.addEventListener("click", closeDiceModal);
+  rollDiceBtn.addEventListener("click", rollDice);
+  rerollDiceBtn.addEventListener("click", rerollSelectedDice);
+  writeDiceBtn.addEventListener("click", showDiceWritePanel);
+  confirmDiceWriteBtn.addEventListener("click", writeDiceResult);
   saveNameBtn.addEventListener("click", savePlayerName);
   cancelNameBtn.addEventListener("click", closeNameModal);
   confirmResetBtn.addEventListener("click", confirmResetGame);
@@ -1029,6 +1278,12 @@
   resetModal.addEventListener("click", (event) => {
     if (event.target === resetModal) {
       closeResetModal();
+    }
+  });
+
+  diceModal.addEventListener("click", (event) => {
+    if (event.target === diceModal) {
+      closeDiceModal();
     }
   });
 
