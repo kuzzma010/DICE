@@ -50,6 +50,8 @@
   const scoringIds = categories.filter((category) => category.type === "input").map((category) => category.id);
   const diceSymbols = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
   const diceCategoryOptions = categories.filter((category) => category.type === "input");
+  const MAX_DICE_ROLLS = 4;
+  const upperDiceCategoryIds = ["ones", "twos", "threes", "fours", "fives", "sixes"];
 
   const state = {
     version: "",
@@ -507,7 +509,7 @@
 
       button.type = "button";
       button.className = "die-btn";
-      button.disabled = diceState.rollCount === 0 || diceState.rollCount >= 3 || diceState.isRolling;
+      button.disabled = diceState.rollCount === 0 || diceState.rollCount >= MAX_DICE_ROLLS || diceState.isRolling;
       button.dataset.index = String(index);
       button.setAttribute("aria-pressed", String(diceState.rerollSelected[index]));
       button.addEventListener("click", () => toggleDieSelection(index));
@@ -530,7 +532,7 @@
     const hasSelectedDice = diceState.rerollSelected.some(Boolean);
     const analysis = analyzeDice(diceState.values);
 
-    diceRollCounter.textContent = `Бросок ${diceState.rollCount} из 3`;
+    diceRollCounter.textContent = `Бросок ${diceState.rollCount} из ${MAX_DICE_ROLLS}`;
     diceValues.textContent = hasRoll ? diceState.values.join(", ") : "-";
     diceSum.textContent = String(hasRoll ? analysis.sum : 0);
     diceCombo.textContent = hasRoll ? analysis.combo : "-";
@@ -538,12 +540,12 @@
     rollDiceBtn.classList.toggle("hidden", hasRoll);
     rerollDiceBtn.classList.toggle("hidden", !hasRoll);
     writeDiceBtn.classList.toggle("hidden", !hasRoll);
-    rerollDiceBtn.disabled = !hasRoll || diceState.rollCount >= 3 || !hasSelectedDice || diceState.isRolling;
+    rerollDiceBtn.disabled = !hasRoll || diceState.rollCount >= MAX_DICE_ROLLS || !hasSelectedDice || diceState.isRolling;
     writeDiceBtn.disabled = !hasRoll || diceState.isRolling;
 
     if (!hasRoll) {
       diceHint.textContent = "Нажмите “Бросить”, чтобы начать ход.";
-    } else if (diceState.rollCount >= 3) {
+    } else if (diceState.rollCount >= MAX_DICE_ROLLS) {
       diceHint.textContent = "Броски закончились — запишите результат.";
     } else if (!hasSelectedDice) {
       diceHint.textContent = "Выберите кости для переброса или запишите результат.";
@@ -553,7 +555,7 @@
   }
 
   function toggleDieSelection(index) {
-    if (diceState.rollCount === 0 || diceState.rollCount >= 3 || diceState.isRolling) {
+    if (diceState.rollCount === 0 || diceState.rollCount >= MAX_DICE_ROLLS || diceState.isRolling) {
       return;
     }
 
@@ -570,7 +572,7 @@
   }
 
   function rerollSelectedDice() {
-    if (diceState.rollCount === 0 || diceState.rollCount >= 3 || diceState.isRolling) {
+    if (diceState.rollCount === 0 || diceState.rollCount >= MAX_DICE_ROLLS || diceState.isRolling) {
       return;
     }
 
@@ -583,7 +585,7 @@
   }
 
   function performDiceRoll(rollMask) {
-    if (diceState.rollCount >= 3) {
+    if (diceState.rollCount >= MAX_DICE_ROLLS) {
       return;
     }
 
@@ -677,9 +679,9 @@
       sixes: 6,
     };
 
-    if (faceByCategory[categoryId]) {
+    if (isUpperDiceCategory(categoryId)) {
       const indices = byValue.get(faceByCategory[categoryId]) || [];
-      return makeDiceScore(indices);
+      return makeDiceScore(indices, { allowDouble: false });
     }
 
     const candidates = [];
@@ -773,9 +775,11 @@
     return indices.slice(0, amount);
   }
 
-  function makeDiceScore(indices) {
+  function makeDiceScore(indices, options = {}) {
+    const allowDouble = options.allowDouble !== false;
     const base = indices.reduce((sum, index) => sum + diceState.values[index], 0);
-    const hasDouble = base > 0 && indices.length > 0 && indices.every((index) => diceState.firstRollFlags[index]);
+    const hasDouble =
+      allowDouble && base > 0 && indices.length > 0 && indices.every((index) => diceState.firstRollFlags[index]);
 
     return {
       base,
@@ -810,6 +814,10 @@
     populateDiceWriteOptions();
     updateDiceScorePreview();
     diceWritePanel.classList.remove("hidden");
+
+    if (diceState.rollCount < MAX_DICE_ROLLS) {
+      diceHint.textContent = "Комбинации можно записывать только после 4-го броска";
+    }
   }
 
   function populateDiceWriteOptions() {
@@ -825,10 +833,20 @@
 
     diceCategoryOptions.forEach((category) => {
       const option = document.createElement("option");
+      const isLocked = isDiceCombinationCategoryLocked(category.id);
       option.value = category.id;
-      option.textContent = category.label;
+      option.disabled = isLocked;
+      option.textContent = isLocked ? `${category.label} — доступно после 4-го броска` : category.label;
       diceCategorySelect.appendChild(option);
     });
+
+    if (isDiceCombinationCategoryLocked(diceCategorySelect.value)) {
+      const firstAvailableOption = Array.from(diceCategorySelect.options).find((option) => !option.disabled);
+
+      if (firstAvailableOption) {
+        diceCategorySelect.value = firstAvailableOption.value;
+      }
+    }
   }
 
   function updateDiceScorePreview() {
@@ -839,6 +857,14 @@
     diceFinalScore.textContent = String(score.final);
   }
 
+  function isUpperDiceCategory(categoryId) {
+    return upperDiceCategoryIds.includes(categoryId);
+  }
+
+  function isDiceCombinationCategoryLocked(categoryId) {
+    return !isUpperDiceCategory(categoryId) && diceState.rollCount < MAX_DICE_ROLLS;
+  }
+
   function writeDiceResult() {
     if (diceState.rollCount === 0) {
       return;
@@ -846,6 +872,12 @@
 
     const playerIndex = Number(dicePlayerSelect.value);
     const categoryId = diceCategorySelect.value;
+
+    if (isDiceCombinationCategoryLocked(categoryId)) {
+      diceHint.textContent = "Комбинации можно записывать только после 4-го броска";
+      return;
+    }
+
     const result = calculateDiceCategoryScore(categoryId).final;
 
     if (!state.scores[playerIndex]) {

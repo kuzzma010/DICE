@@ -679,6 +679,10 @@ h2 {
   font-weight: 800;
 }
 
+.dice-write-panel option:disabled {
+  color: rgba(146, 152, 168, 0.55);
+}
+
 .dice-score-preview {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
