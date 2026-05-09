@@ -50,8 +50,16 @@
   const scoringIds = categories.filter((category) => category.type === "input").map((category) => category.id);
   const diceSymbols = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
   const diceCategoryOptions = categories.filter((category) => category.type === "input");
-  const MAX_DICE_ROLLS = 4;
+  const MAX_DICE_ROLLS = 3;
   const upperDiceCategoryIds = ["ones", "twos", "threes", "fours", "fives", "sixes"];
+  const faceByUpperDiceCategory = {
+    ones: 1,
+    twos: 2,
+    threes: 3,
+    fours: 4,
+    fives: 5,
+    sixes: 6,
+  };
 
   const state = {
     version: "",
@@ -654,6 +662,26 @@
     return straights.some((straight) => straight.every((value) => counts.has(value)));
   }
 
+  function calculateUpperDiceCategoryScore(categoryId, byValue) {
+    const face = faceByUpperDiceCategory[categoryId];
+    const count = (byValue.get(face) || []).length;
+
+    if (count === 0) {
+      return { base: 0, final: 0, hasDouble: false, isUnavailable: true };
+    }
+
+    const multiplierByCount = {
+      1: -2,
+      2: -1,
+      3: 0,
+      4: 1,
+      5: 2,
+    };
+    const value = multiplierByCount[count] * face;
+
+    return { base: value, final: value, hasDouble: false, isUnavailable: false };
+  }
+
   function calculateDiceCategoryScore(categoryId) {
     const values = diceState.values;
     const byValue = new Map();
@@ -670,18 +698,8 @@
       byValue.get(value).push(index);
     });
 
-    const faceByCategory = {
-      ones: 1,
-      twos: 2,
-      threes: 3,
-      fours: 4,
-      fives: 5,
-      sixes: 6,
-    };
-
     if (isUpperDiceCategory(categoryId)) {
-      const indices = byValue.get(faceByCategory[categoryId]) || [];
-      return makeDiceScore(indices, { allowDouble: false });
+      return calculateUpperDiceCategoryScore(categoryId, byValue);
     }
 
     const candidates = [];
@@ -834,13 +852,14 @@
     diceCategoryOptions.forEach((category) => {
       const option = document.createElement("option");
       const isLocked = isDiceCombinationCategoryLocked(category.id);
+      const isUnavailableUpperCategory = isUpperDiceCategoryUnavailable(category.id);
       option.value = category.id;
-      option.disabled = isLocked;
-      option.textContent = isLocked ? `${category.label} — доступно после 4-го броска` : category.label;
+      option.disabled = isLocked || isUnavailableUpperCategory;
+      option.textContent = getDiceCategoryOptionLabel(category, isLocked, isUnavailableUpperCategory);
       diceCategorySelect.appendChild(option);
     });
 
-    if (isDiceCombinationCategoryLocked(diceCategorySelect.value)) {
+    if (isDiceCombinationCategoryLocked(diceCategorySelect.value) || isUpperDiceCategoryUnavailable(diceCategorySelect.value)) {
       const firstAvailableOption = Array.from(diceCategorySelect.options).find((option) => !option.disabled);
 
       if (firstAvailableOption) {
@@ -865,6 +884,26 @@
     return !isUpperDiceCategory(categoryId) && diceState.rollCount < MAX_DICE_ROLLS;
   }
 
+  function isUpperDiceCategoryUnavailable(categoryId) {
+    if (!isUpperDiceCategory(categoryId)) {
+      return false;
+    }
+
+    return diceState.values.filter((value) => value === faceByUpperDiceCategory[categoryId]).length === 0;
+  }
+
+  function getDiceCategoryOptionLabel(category, isLocked, isUnavailableUpperCategory) {
+    if (isUnavailableUpperCategory) {
+      return `${category.label} — нет такого кубика`;
+    }
+
+    if (isLocked) {
+      return `${category.label} — доступно после 4-го броска`;
+    }
+
+    return category.label;
+  }
+
   function writeDiceResult() {
     if (diceState.rollCount === 0) {
       return;
@@ -878,7 +917,14 @@
       return;
     }
 
-    const result = calculateDiceCategoryScore(categoryId).final;
+    const score = calculateDiceCategoryScore(categoryId);
+
+    if (score.isUnavailable) {
+      diceHint.textContent = "Нет такого кубика";
+      return;
+    }
+
+    const result = score.final;
 
     if (!state.scores[playerIndex]) {
       state.scores[playerIndex] = {};
