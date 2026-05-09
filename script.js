@@ -139,6 +139,7 @@
   let pollTimer = null;
   let lastLocalScoreEditAt = 0;
   let hasPendingScoreEdit = false;
+  let isCommittingScoreEdit = false;
   const diceState = {
     values: [0, 0, 0, 0, 0],
     firstRollFlags: [false, false, false, false, false],
@@ -1065,25 +1066,39 @@
     }
   }
 
-  function handleScoreBlur() {
+  function handleScoreBlur(event) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+    if (hasPendingScoreEdit && !isCommittingScoreEdit) {
+      commitScoreInput(event.target);
+    }
   }
 
   async function commitScoreInput(input) {
+    if (isCommittingScoreEdit) {
+      return;
+    }
+
+    isCommittingScoreEdit = true;
     input.blur();
 
     if (!state.isOnline || !state.gameId) {
       hasPendingScoreEdit = false;
       saveState();
+      isCommittingScoreEdit = false;
       return;
     }
 
     window.clearTimeout(syncTimer);
-    const ok = await syncOnlineState();
+    try {
+      const ok = await syncOnlineState();
 
-    if (ok) {
-      hasPendingScoreEdit = false;
-      window.setTimeout(() => loadOnlineGame(state.gameId, { force: true }), 500);
+      if (ok) {
+        hasPendingScoreEdit = false;
+        window.setTimeout(() => loadOnlineGame(state.gameId, { force: true }), 500);
+      }
+    } finally {
+      isCommittingScoreEdit = false;
     }
   }
 
@@ -1273,7 +1288,7 @@
       return false;
     }
 
-    if (!options.force && (hasPendingScoreEdit || Date.now() - lastLocalScoreEditAt < 1500)) {
+    if (!options.force && (isCommittingScoreEdit || Date.now() - lastLocalScoreEditAt < 1500)) {
       return false;
     }
 
