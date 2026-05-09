@@ -105,6 +105,20 @@
             <button type="button" id="copyGameLinkBtn">Ссылка</button>
           </div>
 
+          <div id="turnBar" class="turn-bar hidden" aria-live="polite">
+            <strong id="turnPlayerLabel">Сейчас ход: Игрок</strong>
+            <span id="turnStatusLabel">Ожидайте ход игрока</span>
+          </div>
+
+          <div id="onlineDiceViewer" class="online-dice-viewer hidden" aria-live="polite">
+            <div class="online-dice-meta">
+              <strong id="onlineDicePlayer">Игрок бросает кости</strong>
+              <span id="onlineDiceRoll">Бросок 0 из 3</span>
+            </div>
+            <div id="onlineDiceValues" class="online-dice-values" aria-label="Онлайн кости"></div>
+            <p id="onlineDiceMode" class="online-dice-mode"></p>
+          </div>
+
           <div class="table-shell">
             <table class="score-table">
               <thead id="tableHead"></thead>
@@ -145,7 +159,9 @@
           <button type="button" id="closeDiceBtn" class="icon-close" aria-label="Закрыть">×</button>
         </div>
 
-        <p id="diceRollCounter" class="dice-counter">Бросок 0 из 3</p>
+        <p id="diceRollCounter" class="dice-counter">Бросок 0 из 4</p>
+        <label class="dice-active-player-label" for="diceActivePlayerSelect">Кто бросает</label>
+        <select id="diceActivePlayerSelect" class="dice-active-player-select"></select>
         <div id="diceSet" class="dice-set" aria-label="Кости"></div>
         <p id="diceHint" class="dice-hint">Нажмите “Бросить”, чтобы начать ход.</p>
 

@@ -1,5 +1,6 @@
 (function () {
   const STORAGE_KEY = "dicePokerTelegramAppState";
+  const GUEST_ID_KEY = "dicePokerGuestId";
   const SUPABASE_URL = "https://nntczgqazcwecrgbpwnl.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_HSOdAIIx84jYiM67vVOn9A_yIBVKutA";
   const tg = window.Telegram && window.Telegram.WebApp;
@@ -50,7 +51,7 @@
   const scoringIds = categories.filter((category) => category.type === "input").map((category) => category.id);
   const diceSymbols = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
   const diceCategoryOptions = categories.filter((category) => category.type === "input");
-  const MAX_DICE_ROLLS = 3;
+  const MAX_DICE_ROLLS = 4;
   const upperDiceCategoryIds = ["ones", "twos", "threes", "fours", "fives", "sixes"];
   const faceByUpperDiceCategory = {
     ones: 1,
@@ -69,6 +70,7 @@
     players: [],
     scores: {},
     gameStarted: false,
+    currentTurnPlayerIndex: 0,
   };
 
   const versionScreen = document.getElementById("versionScreen");
@@ -95,6 +97,14 @@
   const onlineGameBar = document.getElementById("onlineGameBar");
   const onlineGameLabel = document.getElementById("onlineGameLabel");
   const copyGameLinkBtn = document.getElementById("copyGameLinkBtn");
+  const turnBar = document.getElementById("turnBar");
+  const turnPlayerLabel = document.getElementById("turnPlayerLabel");
+  const turnStatusLabel = document.getElementById("turnStatusLabel");
+  const onlineDiceViewer = document.getElementById("onlineDiceViewer");
+  const onlineDicePlayer = document.getElementById("onlineDicePlayer");
+  const onlineDiceRoll = document.getElementById("onlineDiceRoll");
+  const onlineDiceValues = document.getElementById("onlineDiceValues");
+  const onlineDiceMode = document.getElementById("onlineDiceMode");
   const backToCountBtn = document.getElementById("backToCountBtn");
   const continueToGameBtn = document.getElementById("continueToGameBtn");
   const newGameBtn = document.getElementById("newGameBtn");
@@ -115,6 +125,7 @@
   const confirmDiceWriteBtn = document.getElementById("confirmDiceWriteBtn");
   const diceSet = document.getElementById("diceSet");
   const diceRollCounter = document.getElementById("diceRollCounter");
+  const diceActivePlayerSelect = document.getElementById("diceActivePlayerSelect");
   const diceHint = document.getElementById("diceHint");
   const diceValues = document.getElementById("diceValues");
   const diceSum = document.getElementById("diceSum");
@@ -140,6 +151,9 @@
   let lastLocalScoreEditAt = 0;
   let hasPendingScoreEdit = false;
   let isCommittingScoreEdit = false;
+  let onlineDiceState = null;
+  const localClientId = getLocalClientId();
+  let localPlayerIndex = null;
   const diceState = {
     values: [0, 0, 0, 0, 0],
     firstRollFlags: [false, false, false, false, false],
@@ -177,6 +191,24 @@
     }
   }
 
+  function getLocalClientId() {
+    const telegramUserId = tg?.initDataUnsafe?.user?.id;
+
+    if (telegramUserId) {
+      return `tg:${telegramUserId}`;
+    }
+
+    const savedGuestId = localStorage.getItem(GUEST_ID_KEY);
+
+    if (savedGuestId) {
+      return savedGuestId;
+    }
+
+    const generatedGuestId = `guest:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(GUEST_ID_KEY, generatedGuestId);
+    return generatedGuestId;
+  }
+
   function createPlayerButtons() {
     for (let count = 2; count <= 6; count += 1) {
       const button = document.createElement("button");
@@ -192,6 +224,7 @@
     state.players = Array.from({ length: playerCount }, (_, index) => `Игрок ${index + 1}`);
     state.scores = {};
     state.gameStarted = false;
+    state.currentTurnPlayerIndex = 0;
     namesSetupActive = true;
 
     for (let playerIndex = 0; playerIndex < playerCount; playerIndex += 1) {
@@ -277,6 +310,7 @@
     gameScreen.classList.remove("hidden");
     app.classList.add("is-game-active");
     renderTable();
+    updateTurnUi();
   }
 
   function chooseVersion(version) {
@@ -314,6 +348,7 @@
     state.players = [];
     state.scores = {};
     state.gameStarted = false;
+    state.currentTurnPlayerIndex = 0;
     namesSetupActive = false;
 
     onlineStatus.textContent = "Создаю онлайн-игру...";
@@ -366,10 +401,100 @@
     const isOnlineGame = Boolean(state.isOnline && state.gameId);
 
     onlineGameBar.classList.toggle("hidden", !isOnlineGame);
+    turnBar.classList.toggle("hidden", !isOnlineGame || !state.gameStarted || !state.playerCount);
 
     if (isOnlineGame) {
       onlineGameLabel.textContent = `Онлайн-игра ${state.gameId}`;
     }
+
+    updateTurnUi();
+  }
+
+  function getCurrentTurnPlayerIndex() {
+    const index = Number(state.currentTurnPlayerIndex) || 0;
+    return state.playerCount ? Math.min(Math.max(index, 0), state.playerCount - 1) : 0;
+  }
+
+  function getCurrentTurnPlayerName() {
+    const index = getCurrentTurnPlayerIndex();
+    return state.players[index] || `Игрок ${index + 1}`;
+  }
+
+  function isMyOnlineTurn() {
+    return !state.isOnline || !state.gameId || Number(localPlayerIndex) === getCurrentTurnPlayerIndex();
+  }
+
+  function getPlayerBindingKey(gameId = state.gameId) {
+    return gameId ? `${STORAGE_KEY}:player:${gameId}` : "";
+  }
+
+  function bindLocalPlayer(playerIndex) {
+    if (!state.isOnline || !state.gameId || !Number.isInteger(Number(playerIndex))) {
+      return;
+    }
+
+    localPlayerIndex = Number(playerIndex);
+    localStorage.setItem(getPlayerBindingKey(), String(localPlayerIndex));
+    claimOnlinePlayer(localPlayerIndex);
+  }
+
+  async function claimOnlinePlayer(playerIndex) {
+    if (!supabaseClient || !state.isOnline || !state.gameId || !Number.isInteger(Number(playerIndex))) {
+      return false;
+    }
+
+    const { error } = await supabaseClient
+      .from("players")
+      .update({ client_id: localClientId })
+      .eq("game_id", state.gameId)
+      .eq("player_index", Number(playerIndex));
+
+    if (error) {
+      console.error(error);
+      return false;
+    }
+
+    return true;
+  }
+
+  function resolveLocalPlayerIndex(players = []) {
+    const savedBinding = Number(localStorage.getItem(getPlayerBindingKey()));
+
+    if (Number.isInteger(savedBinding) && savedBinding >= 0 && savedBinding < state.playerCount) {
+      localPlayerIndex = savedBinding;
+      return savedBinding;
+    }
+
+    const ownedPlayer = players.find((player) => player.client_id === localClientId);
+
+    if (ownedPlayer) {
+      bindLocalPlayer(Number(ownedPlayer.player_index));
+      return Number(ownedPlayer.player_index);
+    }
+
+    const freePlayer = players.find((player) => !player.client_id);
+
+    if (freePlayer) {
+      bindLocalPlayer(Number(freePlayer.player_index));
+      return Number(freePlayer.player_index);
+    }
+
+    localPlayerIndex = null;
+    return null;
+  }
+
+  function updateTurnUi() {
+    const isOnlineGame = Boolean(state.isOnline && state.gameId);
+    const currentTurnName = getCurrentTurnPlayerName();
+    const isMyTurn = isMyOnlineTurn();
+
+    if (isOnlineGame && state.gameStarted && state.playerCount) {
+      turnPlayerLabel.textContent = `Сейчас ход: ${currentTurnName}`;
+      turnStatusLabel.textContent = isMyTurn ? "Ваш ход" : `Ожидайте ход игрока ${currentTurnName}`;
+    }
+
+    openDiceBtn.disabled = Boolean(isOnlineGame && state.gameStarted && !isMyTurn);
+    openDiceBtn.title = isOnlineGame && state.gameStarted && !isMyTurn ? `Сейчас ход: ${currentTurnName}` : "";
   }
 
   async function copyOnlineLink() {
@@ -473,6 +598,8 @@
     state.players = state.players.map((playerName, index) => playerName.trim() || `Игрок ${index + 1}`);
     namesSetupActive = false;
     state.gameStarted = true;
+    state.currentTurnPlayerIndex = getCurrentTurnPlayerIndex();
+    bindLocalPlayer(0);
     saveState();
     render();
   }
@@ -482,22 +609,31 @@
     state.players = [];
     state.scores = {};
     state.gameStarted = false;
+    state.currentTurnPlayerIndex = 0;
+    localPlayerIndex = null;
     namesSetupActive = false;
     saveState();
     render();
   }
 
   function openDiceModal() {
+    if (!isMyOnlineTurn()) {
+      updateTurnUi();
+      return;
+    }
+
     resetDiceState();
     populateDiceWriteOptions();
     diceModal.classList.remove("hidden");
     renderDicePanel();
+    syncOnlineDiceState();
   }
 
   function closeDiceModal() {
     diceModal.classList.add("hidden");
     resetDiceState();
     renderDicePanel();
+    clearOnlineDiceState();
   }
 
   function resetDiceState() {
@@ -511,6 +647,7 @@
 
   function renderDicePanel() {
     diceSet.innerHTML = "";
+    const canControlDice = isMyOnlineTurn();
 
     diceState.values.forEach((value, index) => {
       const button = document.createElement("button");
@@ -518,7 +655,7 @@
 
       button.type = "button";
       button.className = "die-btn";
-      button.disabled = diceState.rollCount === 0 || diceState.rollCount >= MAX_DICE_ROLLS || diceState.isRolling;
+      button.disabled = !canControlDice || diceState.rollCount === 0 || diceState.rollCount >= MAX_DICE_ROLLS || diceState.isRolling;
       button.dataset.index = String(index);
       button.setAttribute("aria-pressed", String(diceState.rerollSelected[index]));
       button.addEventListener("click", () => toggleDieSelection(index));
@@ -549,10 +686,13 @@
     rollDiceBtn.classList.toggle("hidden", hasRoll);
     rerollDiceBtn.classList.toggle("hidden", !hasRoll);
     writeDiceBtn.classList.toggle("hidden", !hasRoll);
-    rerollDiceBtn.disabled = !hasRoll || diceState.rollCount >= MAX_DICE_ROLLS || !hasSelectedDice || diceState.isRolling;
-    writeDiceBtn.disabled = !hasRoll || diceState.isRolling;
+    rollDiceBtn.disabled = !canControlDice || diceState.isRolling;
+    rerollDiceBtn.disabled = !canControlDice || !hasRoll || diceState.rollCount >= MAX_DICE_ROLLS || !hasSelectedDice || diceState.isRolling;
+    writeDiceBtn.disabled = !canControlDice || !hasRoll || diceState.isRolling;
 
-    if (!hasRoll) {
+    if (!canControlDice) {
+      diceHint.textContent = `Сейчас ход: ${getCurrentTurnPlayerName()}`;
+    } else if (!hasRoll) {
       diceHint.textContent = "Нажмите “Бросить”, чтобы начать ход.";
     } else if (diceState.rollCount >= MAX_DICE_ROLLS) {
       diceHint.textContent = "Броски закончились — запишите результат.";
@@ -564,15 +704,24 @@
   }
 
   function toggleDieSelection(index) {
+    if (!isMyOnlineTurn()) {
+      return;
+    }
+
     if (diceState.rollCount === 0 || diceState.rollCount >= MAX_DICE_ROLLS || diceState.isRolling) {
       return;
     }
 
     diceState.rerollSelected[index] = !diceState.rerollSelected[index];
     renderDicePanel();
+    syncOnlineDiceState();
   }
 
   function rollDice() {
+    if (!isMyOnlineTurn()) {
+      return;
+    }
+
     if (diceState.rollCount > 0 || diceState.isRolling) {
       return;
     }
@@ -581,6 +730,10 @@
   }
 
   function rerollSelectedDice() {
+    if (!isMyOnlineTurn()) {
+      return;
+    }
+
     if (diceState.rollCount === 0 || diceState.rollCount >= MAX_DICE_ROLLS || diceState.isRolling) {
       return;
     }
@@ -594,6 +747,10 @@
   }
 
   function performDiceRoll(rollMask) {
+    if (!isMyOnlineTurn()) {
+      return;
+    }
+
     if (diceState.rollCount >= MAX_DICE_ROLLS) {
       return;
     }
@@ -612,11 +769,138 @@
       diceState.isRolling = false;
       diceWritePanel.classList.add("hidden");
       renderDicePanel();
+      syncOnlineDiceState();
     }, 260);
   }
 
   function randomDieValue() {
     return Math.floor(Math.random() * 6) + 1;
+  }
+
+  function getDiceActivePlayerIndex() {
+    if (state.isOnline && state.gameId && state.playerCount) {
+      return getCurrentTurnPlayerIndex();
+    }
+
+    const index = Number(diceActivePlayerSelect.value || dicePlayerSelect.value || 0);
+    return Number.isInteger(index) && index >= 0 ? index : 0;
+  }
+
+  function syncDicePlayerSelects(sourceSelect) {
+    const value = sourceSelect.value;
+
+    if (diceActivePlayerSelect.value !== value) {
+      diceActivePlayerSelect.value = value;
+    }
+
+    if (dicePlayerSelect.value !== value) {
+      dicePlayerSelect.value = value;
+    }
+
+    syncOnlineDiceState();
+  }
+
+  async function syncOnlineDiceState() {
+    if (!supabaseClient || !state.isOnline || !state.gameId) {
+      return false;
+    }
+
+    const row = {
+      game_id: state.gameId,
+      active_player_index: getDiceActivePlayerIndex(),
+      dice_values: diceState.rollCount > 0 ? diceState.values : [],
+      reroll_selected: diceState.rollCount > 0 ? diceState.rerollSelected : [],
+      roll_count: diceState.rollCount,
+      updated_at: new Date().toISOString(),
+    };
+
+    onlineDiceState = row;
+    renderOnlineDiceViewer();
+
+    const { error } = await supabaseClient.from("dice_state").upsert(row, { onConflict: "game_id" });
+
+    if (error) {
+      console.error(error);
+      return false;
+    }
+
+    return true;
+  }
+
+  async function clearOnlineDiceState() {
+    if (!supabaseClient || !state.isOnline || !state.gameId) {
+      return false;
+    }
+
+    onlineDiceState = null;
+    renderOnlineDiceViewer();
+
+    const { error } = await supabaseClient.from("dice_state").delete().eq("game_id", state.gameId);
+
+    if (error) {
+      console.error(error);
+      return false;
+    }
+
+    return true;
+  }
+
+  async function loadOnlineDiceState(gameId) {
+    if (!supabaseClient || !gameId) {
+      return false;
+    }
+
+    const { data, error } = await supabaseClient.from("dice_state").select("*").eq("game_id", gameId).maybeSingle();
+
+    if (error) {
+      console.error(error);
+      return false;
+    }
+
+    onlineDiceState = data || null;
+    renderOnlineDiceViewer();
+    return true;
+  }
+
+  function renderOnlineDiceViewer() {
+    const values = Array.isArray(onlineDiceState?.dice_values) ? onlineDiceState.dice_values : [];
+    const selected = Array.isArray(onlineDiceState?.reroll_selected) ? onlineDiceState.reroll_selected : [];
+    const rollCount = Number(onlineDiceState?.roll_count) || 0;
+
+    if (!state.isOnline || !values.some(Boolean) || rollCount <= 0) {
+      onlineDiceViewer.classList.add("hidden");
+      onlineDiceValues.innerHTML = "";
+      return;
+    }
+
+    const activePlayerIndex = Number(onlineDiceState.active_player_index);
+    const playerName = state.players[activePlayerIndex] || `Игрок ${activePlayerIndex + 1}`;
+    const rerollPositions = selected
+      .map((isSelected, index) => (isSelected ? index + 1 : null))
+      .filter(Boolean);
+
+    onlineDicePlayer.textContent = `${playerName} бросает кости`;
+    onlineDiceRoll.textContent = `Бросок ${rollCount} из ${MAX_DICE_ROLLS}`;
+    onlineDiceMode.textContent = rerollPositions.length
+      ? `Перекинуть: ${rerollPositions.join(", ")}. Остальные оставить.`
+      : "Все кости оставлены.";
+    onlineDiceValues.innerHTML = "";
+
+    values.forEach((value, index) => {
+      const die = document.createElement("span");
+      die.textContent = diceSymbols[value] || "🎲";
+
+      if (selected[index]) {
+        die.classList.add("is-reroll");
+        die.title = "Перекинуть";
+      } else {
+        die.title = "Оставить";
+      }
+
+      onlineDiceValues.appendChild(die);
+    });
+
+    onlineDiceViewer.classList.remove("hidden");
   }
 
   function analyzeDice(values) {
@@ -826,6 +1110,11 @@
   }
 
   function showDiceWritePanel() {
+    if (!isMyOnlineTurn()) {
+      diceHint.textContent = `Сейчас ход: ${getCurrentTurnPlayerName()}`;
+      return;
+    }
+
     if (diceState.rollCount === 0) {
       return;
     }
@@ -840,7 +1129,9 @@
   }
 
   function populateDiceWriteOptions() {
+    const previousActivePlayer = diceActivePlayerSelect.value;
     dicePlayerSelect.innerHTML = "";
+    diceActivePlayerSelect.innerHTML = "";
     diceCategorySelect.innerHTML = "";
 
     state.players.forEach((playerName, playerIndex) => {
@@ -848,7 +1139,24 @@
       option.value = String(playerIndex);
       option.textContent = playerName || `Игрок ${playerIndex + 1}`;
       dicePlayerSelect.appendChild(option);
+      diceActivePlayerSelect.appendChild(option.cloneNode(true));
     });
+
+    if (previousActivePlayer && Array.from(diceActivePlayerSelect.options).some((option) => option.value === previousActivePlayer)) {
+      diceActivePlayerSelect.value = previousActivePlayer;
+      dicePlayerSelect.value = previousActivePlayer;
+    }
+
+    if (state.isOnline && state.gameId && state.playerCount) {
+      const turnIndex = String(getCurrentTurnPlayerIndex());
+      diceActivePlayerSelect.value = turnIndex;
+      dicePlayerSelect.value = turnIndex;
+      diceActivePlayerSelect.disabled = true;
+      dicePlayerSelect.disabled = true;
+    } else {
+      diceActivePlayerSelect.disabled = false;
+      dicePlayerSelect.disabled = false;
+    }
 
     diceCategoryOptions.forEach((category) => {
       const option = document.createElement("option");
@@ -906,6 +1214,11 @@
   }
 
   async function writeDiceResult() {
+    if (!isMyOnlineTurn()) {
+      diceHint.textContent = `Сейчас ход: ${getCurrentTurnPlayerName()}`;
+      return;
+    }
+
     if (diceState.rollCount === 0) {
       return;
     }
@@ -934,6 +1247,7 @@
     state.scores[playerIndex][categoryId] = String(result);
     hasPendingScoreEdit = false;
     lastLocalScoreEditAt = Date.now();
+    advanceTurnLocally();
     renderTable();
 
     if (!state.isOnline || !state.gameId) {
@@ -950,12 +1264,23 @@
       const ok = await syncOnlineState();
 
       if (ok) {
+        await clearOnlineDiceState();
         await loadOnlineGame(state.gameId, { force: true });
       }
     } finally {
       isCommittingScoreEdit = false;
       closeDiceModal();
     }
+  }
+
+  function advanceTurnLocally() {
+    if (!state.isOnline || !state.gameId || !state.playerCount) {
+      return;
+    }
+
+    state.currentTurnPlayerIndex = (getCurrentTurnPlayerIndex() + 1) % state.playerCount;
+    resetDiceState();
+    updateTurnUi();
   }
 
   function renderTable() {
@@ -1233,6 +1558,7 @@
       version: state.version,
       player_count: state.playerCount,
       game_started: state.gameStarted,
+      current_turn_player_index: getCurrentTurnPlayerIndex(),
       updated_at: new Date().toISOString(),
     };
 
@@ -1249,6 +1575,7 @@
         game_id: state.gameId,
         player_index: playerIndex,
         name: name || `Игрок ${playerIndex + 1}`,
+        client_id: playerIndex === localPlayerIndex ? localClientId : undefined,
       }));
       const { error: playersError } = await supabaseClient
         .from("players")
@@ -1333,6 +1660,7 @@
     state.players = Array.from({ length: state.playerCount }, (_, index) => `Игрок ${index + 1}`);
     state.scores = {};
     state.gameStarted = Boolean(game.game_started);
+    state.currentTurnPlayerIndex = Number(game.current_turn_player_index) || 0;
     introSeen = true;
     onlineSetupActive = false;
     namesSetupActive = state.playerCount > 0 && !state.gameStarted;
@@ -1348,6 +1676,8 @@
       state.players[player.player_index] = player.name;
     });
 
+    resolveLocalPlayerIndex(players || []);
+
     (scores || []).forEach((score) => {
       if (!state.scores[score.player_index]) {
         state.scores[score.player_index] = {};
@@ -1360,7 +1690,13 @@
     isApplyingRemoteState = false;
     subscribeToOnlineGame();
     startOnlinePolling();
+    loadOnlineDiceState(state.gameId);
     render();
+
+    if (!diceModal.classList.contains("hidden")) {
+      renderDicePanel();
+    }
+
     return true;
   }
 
@@ -1395,6 +1731,11 @@
         { event: "*", schema: "public", table: "scores", filter: `game_id=eq.${state.gameId}` },
         () => loadOnlineGame(state.gameId)
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "dice_state", filter: `game_id=eq.${state.gameId}` },
+        () => loadOnlineDiceState(state.gameId)
+      )
       .subscribe();
 
     startOnlinePolling();
@@ -1412,6 +1753,7 @@
 
       isPollingOnlineState = true;
       loadOnlineGame(state.gameId)
+        .then(() => loadOnlineDiceState(state.gameId))
         .catch((error) => console.error(error))
         .finally(() => {
           isPollingOnlineState = false;
@@ -1447,6 +1789,12 @@
       state.players = Array.isArray(parsed.players) ? parsed.players : [];
       state.scores = parsed.scores || {};
       state.gameStarted = typeof parsed.gameStarted === "boolean" ? parsed.gameStarted : true;
+      state.currentTurnPlayerIndex = Number(parsed.currentTurnPlayerIndex) || 0;
+      localPlayerIndex = Number(localStorage.getItem(getPlayerBindingKey()));
+
+      if (!Number.isInteger(localPlayerIndex) || localPlayerIndex < 0) {
+        localPlayerIndex = null;
+      }
 
       if (state.playerCount) {
         normalizeScores();
@@ -1481,8 +1829,12 @@
       }
     });
 
+    state.currentTurnPlayerIndex = 0;
+    resetDiceState();
+    clearOnlineDiceState();
     saveState();
     renderTable();
+    updateTurnUi();
   }
 
   function openResetModal() {
@@ -1499,6 +1851,7 @@
   }
 
   function newGame() {
+    clearOnlineDiceState();
     stopOnlinePolling();
 
     if (realtimeChannel && supabaseClient) {
@@ -1516,6 +1869,8 @@
     state.players = [];
     state.scores = {};
     state.gameStarted = false;
+    state.currentTurnPlayerIndex = 0;
+    localPlayerIndex = null;
     introSeen = false;
     onlineSetupActive = false;
     namesSetupActive = false;
@@ -1545,6 +1900,8 @@
   rerollDiceBtn.addEventListener("click", rerollSelectedDice);
   writeDiceBtn.addEventListener("click", showDiceWritePanel);
   diceCategorySelect.addEventListener("change", updateDiceScorePreview);
+  diceActivePlayerSelect.addEventListener("change", () => syncDicePlayerSelects(diceActivePlayerSelect));
+  dicePlayerSelect.addEventListener("change", () => syncDicePlayerSelects(dicePlayerSelect));
   confirmDiceWriteBtn.addEventListener("click", writeDiceResult);
   saveNameBtn.addEventListener("click", savePlayerName);
   cancelNameBtn.addEventListener("click", closeNameModal);

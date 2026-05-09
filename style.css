@@ -347,6 +347,92 @@ h2 {
   font-size: 13px;
 }
 
+.turn-bar {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(139, 92, 246, 0.42);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.turn-bar strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.turn-bar span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.online-dice-viewer {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(139, 92, 246, 0.42);
+  border-radius: 8px;
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.online-dice-meta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.online-dice-meta strong,
+.online-dice-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.online-dice-meta strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.online-dice-meta span,
+.online-dice-mode {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.online-dice-values {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.online-dice-values span {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: #f4f0ff;
+  color: #1b1429;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.online-dice-values span.is-reroll {
+  border-color: rgba(251, 93, 122, 0.72);
+  background: #33212f;
+  color: #ffd9e1;
+}
+
+.online-dice-mode {
+  margin: 0;
+}
+
 .accent {
   border-color: rgba(139, 92, 246, 0.8);
   background: var(--accent);
@@ -575,6 +661,24 @@ h2 {
   font-size: 14px;
   font-weight: 800;
   line-height: 1.3;
+}
+
+.dice-active-player-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.dice-active-player-select {
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input);
+  color: var(--text);
+  padding: 0 10px;
+  font: inherit;
+  font-weight: 800;
 }
 
 .dice-set {
