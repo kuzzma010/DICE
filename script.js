@@ -112,6 +112,9 @@
   const diceWritePanel = document.getElementById("diceWritePanel");
   const dicePlayerSelect = document.getElementById("dicePlayerSelect");
   const diceCategorySelect = document.getElementById("diceCategorySelect");
+  const diceBaseScore = document.getElementById("diceBaseScore");
+  const diceDoubleBonus = document.getElementById("diceDoubleBonus");
+  const diceFinalScore = document.getElementById("diceFinalScore");
   const versionButtons = document.querySelectorAll(".version-btn");
 
   let editingPlayerIndex = null;
@@ -128,6 +131,7 @@
   let hasPendingScoreEdit = false;
   const diceState = {
     values: [0, 0, 0, 0, 0],
+    firstRollFlags: [false, false, false, false, false],
     rerollSelected: [false, false, false, false, false],
     rollCount: 0,
     isRolling: false,
@@ -487,6 +491,7 @@
 
   function resetDiceState() {
     diceState.values = [0, 0, 0, 0, 0];
+    diceState.firstRollFlags = [false, false, false, false, false];
     diceState.rerollSelected = [false, false, false, false, false];
     diceState.rollCount = 0;
     diceState.isRolling = false;
@@ -586,7 +591,11 @@
     renderDicePanel();
 
     window.setTimeout(() => {
+      const isFirstRoll = diceState.rollCount === 0;
       diceState.values = diceState.values.map((value, index) => (rollMask[index] ? randomDieValue() : value));
+      diceState.firstRollFlags = diceState.firstRollFlags.map((isFirst, index) =>
+        rollMask[index] ? isFirstRoll : isFirst
+      );
       diceState.rerollSelected = [false, false, false, false, false];
       diceState.rollCount += 1;
       diceState.isRolling = false;
@@ -643,12 +652,163 @@
     return straights.some((straight) => straight.every((value) => counts.has(value)));
   }
 
+  function calculateDiceCategoryScore(categoryId) {
+    const values = diceState.values;
+    const byValue = new Map();
+
+    values.forEach((value, index) => {
+      if (!value) {
+        return;
+      }
+
+      if (!byValue.has(value)) {
+        byValue.set(value, []);
+      }
+
+      byValue.get(value).push(index);
+    });
+
+    const faceByCategory = {
+      ones: 1,
+      twos: 2,
+      threes: 3,
+      fours: 4,
+      fives: 5,
+      sixes: 6,
+    };
+
+    if (faceByCategory[categoryId]) {
+      const indices = byValue.get(faceByCategory[categoryId]) || [];
+      return makeDiceScore(indices);
+    }
+
+    const candidates = [];
+    const faces = Array.from(byValue.keys()).sort((a, b) => b - a);
+
+    if (categoryId === "pair") {
+      faces.forEach((face) => addSameFaceCandidates(candidates, byValue.get(face), 2));
+    } else if (categoryId === "twoPairs") {
+      for (let first = 0; first < faces.length; first += 1) {
+        for (let second = first + 1; second < faces.length; second += 1) {
+          const firstPair = pickDiceIndices(byValue.get(faces[first]), 2);
+          const secondPair = pickDiceIndices(byValue.get(faces[second]), 2);
+
+          if (firstPair.length === 2 && secondPair.length === 2) {
+            candidates.push(makeDiceScore([...firstPair, ...secondPair]));
+          }
+        }
+      }
+    } else if (categoryId === "set") {
+      faces.forEach((face) => addSameFaceCandidates(candidates, byValue.get(face), 3));
+    } else if (categoryId === "smallStraight") {
+      addStraightCandidates(candidates, byValue, [
+        [1, 2, 3, 4],
+        [2, 3, 4, 5],
+        [3, 4, 5, 6],
+      ]);
+    } else if (categoryId === "largeStraight") {
+      addStraightCandidates(candidates, byValue, [
+        [1, 2, 3, 4, 5],
+        [2, 3, 4, 5, 6],
+      ]);
+    } else if (categoryId === "fullHouse") {
+      faces.forEach((tripleFace) => {
+        faces.forEach((pairFace) => {
+          if (tripleFace === pairFace) {
+            return;
+          }
+
+          const triple = pickDiceIndices(byValue.get(tripleFace), 3);
+          const pair = pickDiceIndices(byValue.get(pairFace), 2);
+
+          if (triple.length === 3 && pair.length === 2) {
+            candidates.push(makeDiceScore([...triple, ...pair]));
+          }
+        });
+      });
+    } else if (categoryId === "fourKind") {
+      faces.forEach((face) => addSameFaceCandidates(candidates, byValue.get(face), 4));
+    } else if (categoryId === "poker") {
+      faces.forEach((face) => addSameFaceCandidates(candidates, byValue.get(face), 5));
+    } else if (categoryId === "chance") {
+      candidates.push(makeDiceScore(values.map((value, index) => (value ? index : null)).filter((index) => index !== null)));
+    }
+
+    return pickBestDiceScore(candidates);
+  }
+
+  function addSameFaceCandidates(candidates, indices = [], amount) {
+    const picked = pickDiceIndices(indices, amount);
+
+    if (picked.length === amount) {
+      candidates.push(makeDiceScore(picked));
+    }
+
+    const firstRollPicked = indices.filter((index) => diceState.firstRollFlags[index]).slice(0, amount);
+
+    if (firstRollPicked.length === amount) {
+      candidates.push(makeDiceScore(firstRollPicked));
+    }
+  }
+
+  function addStraightCandidates(candidates, byValue, straights) {
+    straights.forEach((straight) => {
+      if (!straight.every((face) => byValue.has(face))) {
+        return;
+      }
+
+      candidates.push(makeDiceScore(straight.map((face) => pickDiceIndices(byValue.get(face), 1)[0])));
+
+      const firstRollIndices = straight.map((face) =>
+        (byValue.get(face) || []).find((index) => diceState.firstRollFlags[index])
+      );
+
+      if (firstRollIndices.every((index) => typeof index === "number")) {
+        candidates.push(makeDiceScore(firstRollIndices));
+      }
+    });
+  }
+
+  function pickDiceIndices(indices = [], amount) {
+    return indices.slice(0, amount);
+  }
+
+  function makeDiceScore(indices) {
+    const base = indices.reduce((sum, index) => sum + diceState.values[index], 0);
+    const hasDouble = base > 0 && indices.length > 0 && indices.every((index) => diceState.firstRollFlags[index]);
+
+    return {
+      base,
+      final: hasDouble ? base * 2 : base,
+      hasDouble,
+    };
+  }
+
+  function pickBestDiceScore(candidates) {
+    if (!candidates.length) {
+      return { base: 0, final: 0, hasDouble: false };
+    }
+
+    return candidates.reduce((best, candidate) => {
+      if (candidate.final > best.final) {
+        return candidate;
+      }
+
+      if (candidate.final === best.final && candidate.base > best.base) {
+        return candidate;
+      }
+
+      return best;
+    });
+  }
+
   function showDiceWritePanel() {
     if (diceState.rollCount === 0) {
       return;
     }
 
     populateDiceWriteOptions();
+    updateDiceScorePreview();
     diceWritePanel.classList.remove("hidden");
   }
 
@@ -671,6 +831,14 @@
     });
   }
 
+  function updateDiceScorePreview() {
+    const score = calculateDiceCategoryScore(diceCategorySelect.value);
+
+    diceBaseScore.textContent = String(score.base);
+    diceDoubleBonus.textContent = score.hasDouble ? "x2 за первый бросок" : "нет";
+    diceFinalScore.textContent = String(score.final);
+  }
+
   function writeDiceResult() {
     if (diceState.rollCount === 0) {
       return;
@@ -678,7 +846,7 @@
 
     const playerIndex = Number(dicePlayerSelect.value);
     const categoryId = diceCategorySelect.value;
-    const result = analyzeDice(diceState.values).sum;
+    const result = calculateDiceCategoryScore(categoryId).final;
 
     if (!state.scores[playerIndex]) {
       state.scores[playerIndex] = {};
@@ -1263,6 +1431,7 @@
   rollDiceBtn.addEventListener("click", rollDice);
   rerollDiceBtn.addEventListener("click", rerollSelectedDice);
   writeDiceBtn.addEventListener("click", showDiceWritePanel);
+  diceCategorySelect.addEventListener("change", updateDiceScorePreview);
   confirmDiceWriteBtn.addEventListener("click", writeDiceResult);
   saveNameBtn.addEventListener("click", savePlayerName);
   cancelNameBtn.addEventListener("click", closeNameModal);

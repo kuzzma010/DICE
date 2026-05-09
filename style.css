@@ -679,6 +679,37 @@ h2 {
   font-weight: 800;
 }
 
+.dice-score-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.dice-score-preview div {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dice-score-preview span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.dice-score-preview strong {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @keyframes diceShake {
   0% {
     transform: translateY(0) rotate(0deg);
@@ -821,6 +852,10 @@ h2 {
   }
 
   .dice-analysis {
+    grid-template-columns: 1fr;
+  }
+
+  .dice-score-preview {
     grid-template-columns: 1fr;
   }
 
