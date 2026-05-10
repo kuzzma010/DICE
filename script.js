@@ -100,6 +100,7 @@
   const turnBar = document.getElementById("turnBar");
   const turnPlayerLabel = document.getElementById("turnPlayerLabel");
   const turnStatusLabel = document.getElementById("turnStatusLabel");
+  const turnPlayerSelect = document.getElementById("turnPlayerSelect");
   const onlineDiceViewer = document.getElementById("onlineDiceViewer");
   const onlineDicePlayer = document.getElementById("onlineDicePlayer");
   const onlineDiceRoll = document.getElementById("onlineDiceRoll");
@@ -435,7 +436,9 @@
 
     localPlayerIndex = Number(playerIndex);
     localStorage.setItem(getPlayerBindingKey(), String(localPlayerIndex));
+    turnPlayerSelect.value = String(localPlayerIndex);
     claimOnlinePlayer(localPlayerIndex);
+    updateTurnUi();
   }
 
   async function claimOnlinePlayer(playerIndex) {
@@ -472,15 +475,26 @@
       return Number(ownedPlayer.player_index);
     }
 
-    const freePlayer = players.find((player) => !player.client_id);
-
-    if (freePlayer) {
-      bindLocalPlayer(Number(freePlayer.player_index));
-      return Number(freePlayer.player_index);
-    }
-
     localPlayerIndex = null;
     return null;
+  }
+
+  function renderTurnPlayerSelect() {
+    const currentValue = Number.isInteger(Number(localPlayerIndex)) ? String(localPlayerIndex) : turnPlayerSelect.value;
+    turnPlayerSelect.innerHTML = "";
+
+    state.players.forEach((playerName, playerIndex) => {
+      const option = document.createElement("option");
+      option.value = String(playerIndex);
+      option.textContent = playerName || `Игрок ${playerIndex + 1}`;
+      turnPlayerSelect.appendChild(option);
+    });
+
+    if (currentValue && Array.from(turnPlayerSelect.options).some((option) => option.value === currentValue)) {
+      turnPlayerSelect.value = currentValue;
+    } else if (turnPlayerSelect.options.length) {
+      turnPlayerSelect.value = "0";
+    }
   }
 
   function updateTurnUi() {
@@ -489,8 +503,13 @@
     const isMyTurn = isMyOnlineTurn();
 
     if (isOnlineGame && state.gameStarted && state.playerCount) {
+      renderTurnPlayerSelect();
       turnPlayerLabel.textContent = `Сейчас ход: ${currentTurnName}`;
-      turnStatusLabel.textContent = isMyTurn ? "Ваш ход" : `Ожидайте ход игрока ${currentTurnName}`;
+      turnStatusLabel.textContent = Number.isInteger(Number(localPlayerIndex))
+        ? isMyTurn
+          ? "Ваш ход"
+          : `Ожидайте ход игрока ${currentTurnName}`
+        : "Выберите, за какого игрока вы играете";
     }
 
     openDiceBtn.disabled = Boolean(isOnlineGame && state.gameStarted && !isMyTurn);
@@ -1578,7 +1597,6 @@
         game_id: state.gameId,
         player_index: playerIndex,
         name: name || `Игрок ${playerIndex + 1}`,
-        client_id: playerIndex === localPlayerIndex ? localClientId : undefined,
       }));
       const { error: playersError } = await supabaseClient
         .from("players")
@@ -1905,6 +1923,7 @@
   diceCategorySelect.addEventListener("change", updateDiceScorePreview);
   diceActivePlayerSelect.addEventListener("change", () => syncDicePlayerSelects(diceActivePlayerSelect));
   dicePlayerSelect.addEventListener("change", () => syncDicePlayerSelects(dicePlayerSelect));
+  turnPlayerSelect.addEventListener("change", () => bindLocalPlayer(Number(turnPlayerSelect.value)));
   confirmDiceWriteBtn.addEventListener("click", writeDiceResult);
   saveNameBtn.addEventListener("click", savePlayerName);
   cancelNameBtn.addEventListener("click", closeNameModal);
