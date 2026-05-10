@@ -51,7 +51,7 @@
   const scoringIds = categories.filter((category) => category.type === "input").map((category) => category.id);
   const diceSymbols = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
   const diceCategoryOptions = categories.filter((category) => category.type === "input");
-  const MAX_DICE_ROLLS = 4;
+  const MAX_DICE_ROLLS = 3;
   const upperDiceCategoryIds = ["ones", "twos", "threes", "fours", "fives", "sixes"];
   const faceByUpperDiceCategory = {
     ones: 1,
@@ -821,6 +821,7 @@
 
     if (error) {
       console.error(error);
+      onlineStatus.textContent = `Ошибка Supabase dice_state: ${error.message || error.code || "нет доступа"}`;
       return false;
     }
 
@@ -839,6 +840,7 @@
 
     if (error) {
       console.error(error);
+      onlineStatus.textContent = `Ошибка Supabase dice_state: ${error.message || error.code || "нет доступа"}`;
       return false;
     }
 
@@ -854,6 +856,7 @@
 
     if (error) {
       console.error(error);
+      onlineStatus.textContent = `Ошибка Supabase dice_state: ${error.message || error.code || "нет доступа"}`;
       return false;
     }
 
@@ -1124,7 +1127,7 @@
     diceWritePanel.classList.remove("hidden");
 
     if (diceState.rollCount < MAX_DICE_ROLLS) {
-      diceHint.textContent = "Комбинации можно записывать только после 4-го броска";
+      diceHint.textContent = "Комбинации можно записывать только после 3-го броска";
     }
   }
 
@@ -1207,7 +1210,7 @@
     }
 
     if (isLocked) {
-      return `${category.label} — доступно после 4-го броска`;
+      return `${category.label} — доступно после 3-го броска`;
     }
 
     return category.label;
@@ -1227,7 +1230,7 @@
     const categoryId = diceCategorySelect.value;
 
     if (isDiceCombinationCategoryLocked(categoryId)) {
-      diceHint.textContent = "Комбинации можно записывать только после 4-го броска";
+      diceHint.textContent = "Комбинации можно записывать только после 3-го броска";
       return;
     }
 
