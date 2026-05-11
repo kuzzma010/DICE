@@ -150,6 +150,7 @@
   let syncTimer = null;
   let pollTimer = null;
   let lastLocalScoreEditAt = 0;
+  let lastLocalSetupEditAt = 0;
   let hasPendingScoreEdit = false;
   let isCommittingScoreEdit = false;
   let onlineDiceState = null;
@@ -221,6 +222,7 @@
   }
 
   function startGame(playerCount) {
+    lastLocalSetupEditAt = Date.now();
     state.playerCount = playerCount;
     state.players = Array.from({ length: playerCount }, (_, index) => `Игрок ${index + 1}`);
     state.scores = {};
@@ -236,6 +238,10 @@
     }
 
     saveState();
+    if (state.isOnline && state.gameId) {
+      window.clearTimeout(syncTimer);
+      syncOnlineState().catch((error) => console.error(error));
+    }
     render();
     window.setTimeout(() => {
       playerNameFields.querySelector("input")?.focus();
@@ -614,12 +620,17 @@
   }
 
   function continueToGame() {
+    lastLocalSetupEditAt = Date.now();
     state.players = state.players.map((playerName, index) => playerName.trim() || `Игрок ${index + 1}`);
     namesSetupActive = false;
     state.gameStarted = true;
     state.currentTurnPlayerIndex = getCurrentTurnPlayerIndex();
     bindLocalPlayer(0);
     saveState();
+    if (state.isOnline && state.gameId) {
+      window.clearTimeout(syncTimer);
+      syncOnlineState().catch((error) => console.error(error));
+    }
     render();
   }
 
@@ -1656,7 +1667,10 @@
       return false;
     }
 
-    if (!options.force && (isCommittingScoreEdit || Date.now() - lastLocalScoreEditAt < 1500)) {
+    if (
+      !options.force &&
+      (isCommittingScoreEdit || Date.now() - lastLocalScoreEditAt < 1500 || Date.now() - lastLocalSetupEditAt < 3000)
+    ) {
       return false;
     }
 
